@@ -1,0 +1,412 @@
+@page {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+.print-page .activity-content .activity-title {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+}
+
+.print-page .activity-content .activity-title h4 {
+  margin: 0;
+  line-height: 1.25;
+}
+
+.print-page .deadline {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin: 0;
+  padding: .3rem .6rem;
+  border-radius: 999px;
+  background: #b3261e;
+  color: #fff;
+  gap: .3rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: .02em;
+  white-space: nowrap;
+}
+
+@media print {
+  html,
+  body,
+  #app,
+  .print-page,
+  .print-page .activity-card,
+  .print-page .deadline {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    margin: 0 !important;
+  }
+
+  body > #app > .topbar,
+  body > #app > #workspace > .sidebar,
+  body > #app > #workspace > main > section > .page-heading,
+  body > #app > #workspace > main > section > .toolbar,
+  body > #app > #workspace > main > section > .period {
+    display: none !important;
+  }
+
+  body > #app > #workspace,
+  body > #app > #workspace > main {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body > #app > #workspace > main * {
+    visibility: visible !important;
+  }
+
+  .print-page {
+    position: relative;
+    height: 277mm;
+    padding: 0 16mm 0 0;
+    margin: 0;
+    page-break-after: always;
+    break-after: page;
+    overflow: hidden;
+  }
+
+  .print-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .activity-card {
+    break-inside: avoid;
+    display: grid;
+    grid-template-columns: 1.1rem 1fr;
+    column-gap: .3rem;
+    padding: .08rem 0;
+    margin: 0;
+    border-bottom: 1px solid #d5d5d5;
+    font-size: 7.8pt;
+  }
+
+  .activity-card h4 {
+    font-size: 8.2pt;
+    margin: 0;
+  }
+
+  .activity-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 7.5rem;
+    column-gap: .4rem;
+    align-items: start;
+  }
+
+  .activity-content .activity-title,
+  .activity-content p {
+    grid-column: 1;
+  }
+
+  .activity-content .signature {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .activity-card p {
+    margin: .02rem 0;
+    line-height: 1;
+  }
+
+  .daypart {
+    padding: .28rem .4rem .12rem;
+    border-top: 2px solid #668b78;
+    background: transparent;
+  }
+
+  .daypart h4 {
+    font-size: 9.5pt;
+    margin: .08rem 0;
+    color: #17342a;
+  }
+
+  .daypart h4 small {
+    color: #8a8a8a;
+    font-size: .72em;
+    font-weight: normal;
+  }
+
+  .signature {
+    display: grid;
+    justify-items: stretch;
+    align-content: end;
+    gap: 0;
+    justify-content: stretch !important;
+    margin: 0 0 0 auto;
+    padding: 0;
+    width: 7rem;
+    font-size: 6.8pt;
+    text-align: left;
+    border: 0 !important;
+  }
+
+  .signature strong {
+    font-size: 6.8pt;
+    font-weight: normal;
+  }
+
+  .week-print .day-view {
+    page-break-after: always;
+  }
+
+  .blank-print-page {
+    display: block;
+    height: 1px;
+    page-break-after: always;
+  }
+
+  .back-page-note {
+    position: absolute;
+    right: 2mm;
+    bottom: 3mm;
+    margin: 0;
+    padding: .6rem .35rem;
+    border: 1px solid #126b45;
+    border-radius: 3px;
+    background: #e6f2ec;
+    color: #126b45;
+    font-size: 8pt;
+    font-weight: bold;
+    opacity: .8;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+
+  .print-page h2 small {
+    color: #777;
+    font-size: .72em;
+    font-weight: normal;
+  }
+
+  .handbook-entry {
+    border: 0;
+    border-bottom: 1px solid #aaa;
+    border-radius: 0;
+    break-inside: avoid;
+  }
+
+  .handbook-entry button,
+  .hero {
+    display: none;
+  }
+}
+
+@media screen {
+  #print-content {
+    display: grid;
+    justify-items: center;
+    gap: 1.5rem;
+  }
+
+  .print-page {
+    position: relative;
+    width: min(100%, 960px);
+    min-height: 0;
+    padding: 2rem 3rem 2.5rem;
+    overflow: visible;
+    background: #fff;
+    box-shadow: 0 4px 18px #17342a12;
+    border-radius: 10px;
+  }
+
+  .print-page h2 {
+    margin: 0 0 1.25rem;
+    padding-bottom: .8rem;
+    border-bottom: 0;
+    background: transparent;
+    border-radius: 6px;
+    padding-left: .75rem;
+    font-size: 1.45rem;
+  }
+
+  .print-page .activity-card {
+    break-inside: avoid;
+    display: grid;
+    grid-template-columns: 1.1rem 1fr;
+    column-gap: .3rem;
+    padding: .8rem .7rem;
+    margin: .15rem 0;
+    border: 0;
+    border-bottom: 0;
+    border-radius: 7px;
+    box-shadow: none;
+    font-size: .95rem;
+    background: #fff;
+  }
+
+  .print-page .activity-card:nth-child(even) {
+    background: #fff;
+  }
+
+  .print-page .activity-card h4 {
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  .print-page .activity-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 7.5rem;
+    column-gap: .4rem;
+    align-items: start;
+  }
+
+  .print-page .activity-content .activity-title,
+  .print-page .activity-content p {
+    grid-column: 1;
+  }
+
+  .print-page .activity-content .signature {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .print-page .activity-card p {
+    margin: .2rem 0 0;
+    line-height: 1.35;
+  }
+
+  .print-page .daypart {
+    padding: .9rem .65rem .4rem;
+    margin-top: .9rem;
+    border-top: 2px solid #668b78;
+    background: transparent;
+    border-radius: 8px;
+  }
+
+  .print-page .daypart h4 {
+    font-size: 1.25rem;
+    margin: 0 0 .45rem;
+    padding-left: .65rem;
+  }
+
+  .print-page .daypart h4 small {
+    color: #8a8a8a;
+    font-size: .72em;
+    font-weight: normal;
+  }
+
+  .print-page .signature {
+    display: grid;
+    justify-items: stretch;
+    align-content: end;
+    gap: .1rem;
+    justify-content: stretch;
+    margin: 0 0 0 auto;
+    padding: 0;
+    width: 8.5rem;
+    font-size: .78rem;
+    text-align: left;
+    border: 0;
+  }
+
+  .print-page .signature strong {
+    font-size: .78rem;
+    font-weight: normal;
+  }
+
+  .print-page .back-page-note {
+    position: absolute;
+    right: 2mm;
+    bottom: 3mm;
+    margin: 0;
+    padding: .6rem .35rem;
+    border: 1px solid #126b45;
+    border-radius: 3px;
+    background: #e6f2ec;
+    color: #126b45;
+    font-size: 8pt;
+    font-weight: bold;
+    opacity: .8;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+
+  .blank-print-page {
+    display: none;
+  }
+
+  @media (max-width: 900px) {
+    .print-page,
+    .blank-print-page {
+      width: 100%;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
+}
+
+@media print {
+  .print-page .activity-card {
+    padding: .08rem 0;
+    margin: 0;
+    border: 0;
+    border-bottom: 1px solid #d5d5d5;
+    border-radius: 0;
+    box-shadow: none;
+    font-size: 7.8pt;
+  }
+
+  .print-page .activity-card h4 {
+    font-size: 8.2pt;
+  }
+
+  .print-page .activity-card p {
+    margin: .02rem 0;
+    line-height: 1;
+  }
+
+  .print-page .daypart {
+    padding: .28rem .4rem .12rem;
+    margin-top: 0;
+    border-top: 2px solid #668b78;
+    background: transparent;
+  }
+
+  .print-page .daypart h4 {
+    font-size: 11pt;
+    margin: .08rem 0;
+    padding: 0;
+    color: #17342a;
+  }
+
+  .print-page .signature {
+    gap: 0;
+    width: 7rem;
+    font-size: 6.8pt;
+  }
+
+  .print-page .signature strong {
+    font-size: 6.8pt;
+  }
+
+  .print-page .deadline {
+    margin: 0;
+    padding: .22rem .45rem;
+    border-radius: 999px;
+    background: #b3261e !important;
+    color: #fff !important;
+    gap: .2rem;
+    font-size: 10.5pt;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: .02em;
+    white-space: nowrap;
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "actiplan",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/node-tests.js"
+  }
+}
