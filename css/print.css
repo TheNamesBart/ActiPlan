@@ -71,9 +71,14 @@
     visibility: visible !important;
   }
 
+  #print-content {
+    display: block !important;
+    gap: 0 !important;
+  }
+
   .print-page {
     position: relative;
-    height: 277mm;
+    height: calc(277mm - 1px);
     padding: 0 16mm 0 0;
     margin: 0;
     page-break-after: always;
@@ -81,9 +86,9 @@
     overflow: hidden;
   }
 
-  .print-page:last-child {
-    page-break-after: auto;
-    break-after: auto;
+  .print-page.last-print-page {
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
 
   .activity-card {
