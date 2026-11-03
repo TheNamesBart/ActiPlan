@@ -1,4 +1,4 @@
-import {samplePlan,validatePlan,occursOn,dateFromIsoWeek,weeksInYear,orderActivities,recurrenceLabel} from "../js/core.js";
+import {samplePlan,validatePlan,occursOn,dateFromIsoWeek,weeksInYear,orderActivities,recurrenceLabel} from "../docs/js/core.js";
 const plan=samplePlan();
 const checks=[
   ["voorbeeldplanning is geldig",validatePlan(plan).length===0],
