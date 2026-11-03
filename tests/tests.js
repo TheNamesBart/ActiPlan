@@ -1,4 +1,4 @@
-import {samplePlan,validatePlan,occursOn,activitiesForDate,dateFromIsoWeek,weeksInYear,orderActivities,recurrenceLabel,deadlineWithinDaypart} from "../js/core.js";
+import {samplePlan,validatePlan,occursOn,activitiesForDate,dateFromIsoWeek,weeksInYear,orderActivities,recurrenceLabel,deadlineWithinDaypart} from "../docs/js/core.js";
 const results=document.querySelector("#results");let passed=0;
 function test(name,fn){const li=document.createElement("li");try{if(fn()===false)throw Error("onverwacht resultaat");li.textContent=`✓ ${name}`;li.className="ok";passed++}catch(e){li.textContent=`✗ ${name}: ${e.message}`;li.className="fail"}results.append(li)}
 const plan=samplePlan(), day=new Date(2024,1,29);
