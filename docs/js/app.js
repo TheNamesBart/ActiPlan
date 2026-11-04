@@ -569,29 +569,50 @@ function showForm(existing) {
     monthlyFields = d.querySelector(".monthly-fields"),
     monthlyFieldset = document.createElement("fieldset"),
     monthlyLegend = document.createElement("legend");
-  const fieldHelp = {
-    description: "Deze beschrijving is zichtbaar op de uitgeprinte planning.",
-    workInstruction: "Deze instructie wordt opgenomen in de werkinstructies.",
-    durationMinutes: "In minuten.",
-    deadline: "Het tijdstip waarop deze activiteit uiterlijk afgerond moet zijn.",
+  const fieldConfig = {
+    name: { label: "Naam", required: true },
+    description: {
+      label: "Korte beschrijving",
+      help: "Deze beschrijving is zichtbaar op de uitgeprinte planning.",
+    },
+    workInstruction: {
+      label: "Werkinstructie",
+      help: "Deze instructie wordt opgenomen in de werkinstructies.",
+    },
+    durationMinutes: {
+      label: "Indicatie benodigde tijd",
+      required: true,
+      help: "In minuten.",
+    },
+    deadline: {
+      label: "Deadline",
+      help: "Het tijdstip waarop deze activiteit uiterlijk afgerond moet zijn.",
+    },
+    daypart: { label: "Dagdeel", required: true },
+    recurrenceType: { label: "Herhaling", required: true },
   };
-  for (const [name, text] of Object.entries(fieldHelp)) {
+  for (const [name, config] of Object.entries(fieldConfig)) {
     const input = d.querySelector(`[name="${name}"]`),
       label = input?.closest("label");
     if (!input || !label) continue;
-    if (name === "description" || name === "workInstruction")
-      label.firstChild.textContent =
-        name === "description" ? "Korte beschrijving" : "Werkinstructie";
-    if (name === "durationMinutes") label.firstChild.textContent = "Indicatie benodigde tijd";
     const title = document.createElement("span");
     title.className = "field-label";
     while (label.firstChild && label.firstChild !== input)
-      title.append(label.firstChild);
+      label.firstChild.remove();
+    title.textContent = config.label;
+    if (config.required) {
+      const mark = document.createElement("span");
+      mark.className = "required-mark";
+      mark.textContent = "*";
+      title.append(mark);
+    }
     label.insertBefore(title, input);
-    const help = document.createElement("small");
-    help.className = "field-help";
-    help.textContent = text;
-    label.insertBefore(help, input);
+    if (config.help) {
+      const help = document.createElement("small");
+      help.className = "field-help";
+      help.textContent = config.help;
+      label.insertBefore(help, input);
+    }
   }
   monthlyFieldset.className = "monthly-fields";
   monthlyLegend.textContent = "Maandelijkse herhaling";
