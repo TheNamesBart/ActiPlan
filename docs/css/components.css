@@ -163,6 +163,14 @@ a:focus-visible {
   font-weight: normal;
 }
 
+.field-help {
+  display: block;
+  color: #718078;
+  font-size: 0.75rem;
+  font-weight: normal;
+  line-height: 1.35;
+}
+
 .required-mark {
   color: #a52a2a;
   font-weight: bold;
@@ -365,14 +373,14 @@ a:focus-visible {
 }
 
 dialog form > label:has(.required-mark) {
-  display: block;
+  display: grid;
 }
 
 dialog form > label:has(.required-mark) > input,
 dialog form > label:has(.required-mark) > select {
   display: block;
   width: 100%;
-  margin-top: 0.35rem;
+  margin-top: 0;
 }
 
 dialog form > .monthly-fields,

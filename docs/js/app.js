@@ -569,6 +569,30 @@ function showForm(existing) {
     monthlyFields = d.querySelector(".monthly-fields"),
     monthlyFieldset = document.createElement("fieldset"),
     monthlyLegend = document.createElement("legend");
+  const fieldHelp = {
+    description: "Deze beschrijving is zichtbaar op de uitgeprinte planning.",
+    workInstruction: "Deze instructie wordt opgenomen in de werkinstructies.",
+    durationMinutes: "In minuten.",
+    deadline: "Het tijdstip waarop deze activiteit uiterlijk afgerond moet zijn.",
+  };
+  for (const [name, text] of Object.entries(fieldHelp)) {
+    const input = d.querySelector(`[name="${name}"]`),
+      label = input?.closest("label");
+    if (!input || !label) continue;
+    if (name === "description" || name === "workInstruction")
+      label.firstChild.textContent =
+        name === "description" ? "Korte beschrijving" : "Werkinstructie";
+    if (name === "durationMinutes") label.firstChild.textContent = "Indicatie benodigde tijd";
+    const title = document.createElement("span");
+    title.className = "field-label";
+    while (label.firstChild && label.firstChild !== input)
+      title.append(label.firstChild);
+    label.insertBefore(title, input);
+    const help = document.createElement("small");
+    help.className = "field-help";
+    help.textContent = text;
+    label.insertBefore(help, input);
+  }
   monthlyFieldset.className = "monthly-fields";
   monthlyLegend.textContent = "Maandelijkse herhaling";
   monthlyFieldset.append(monthlyLegend, ...monthlyFields.childNodes);
