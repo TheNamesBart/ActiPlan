@@ -1,54 +1,127 @@
 <!doctype html>
 <html lang="nl">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#126b45">
-  <link rel="manifest" href="manifest.json">
-  <title>ActiPlan</title>
-  <link rel="stylesheet" href="css/styles.css?v=final-20261103-2">
-  <link rel="stylesheet" href="css/components.css?v=15">
-  <link rel="stylesheet" href="css/print.css?v=40">
-</head>
-<body>
-  <div id="app">
-    <header class="topbar">
-      <a class="brand" href="#home" aria-label="ActiPlan thuis">Acti<span>Plan</span></a>
-      <div id="file-summary" class="file-summary">Geen planning geopend</div>
-      <div id="status" class="status">Geen planning geopend</div>
-    </header>
-    <div id="welcome" class="welcome">
-      <section class="welcome-card">
-        <p class="eyebrow">Eenvoudig plannen en afdrukken</p>
-        <h1>Welkom bij ActiPlan</h1>
-        <p>Maak een overzichtelijke activiteitenplanning voor iedere afdeling. Uw gegevens blijven in deze browser en worden alleen opgeslagen wanneer u dat zelf kiest.</p>
-        <div class="welcome-actions">
-          <button id="open-plan" class="button primary">Bestaande planning openen</button>
-          <button id="new-plan" class="button">Nieuwe planning aanmaken</button>
-          <button id="sample-plan" class="button">Voorbeeldplanning laden</button>
-        </div>
-        <input id="file-input" type="file" accept=".json,application/json" hidden>
-      </section>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#126b45" />
+    <link rel="manifest" href="manifest.json" />
+    <title>ActiPlan</title>
+    <link rel="stylesheet" href="css/styles.css?v=20261104-11" />
+    <link rel="stylesheet" href="css/components.css?v=34" />
+    <link rel="stylesheet" href="css/print.css?v=42" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <a class="brand" href="#home" aria-label="ActiPlan thuis"
+          >Acti<span>Plan</span></a
+        >
+        <div id="file-summary" class="file-summary">Geen planning geopend</div>
+        <div id="status" class="status" hidden></div>
+      </header>
+      <div id="welcome" class="welcome">
+        <section class="welcome-card">
+          <p class="eyebrow">Plan en print eenvoudig</p>
+          <h1>Welkom bij ActiPlan</h1>
+          <p>
+            Maak snel een duidelijke activiteitenplanning! Je gegevens blijven
+            in deze browser en worden alleen opgeslagen wanneer jij dat wilt.
+          </p>
+          <details class="save-tip">
+            <summary>
+              Let op: vergeet je planning niet op te slaan op je computer
+            </summary>
+            <p>
+              Sla je planning na het bewerken op je computer op. Sluit je de
+              browser zonder op te slaan, dan ben je je wijzigingen kwijt.
+            </p>
+          </details>
+          <div class="welcome-actions">
+            <div class="welcome-primary-actions">
+              <button id="open-plan" class="button primary" autofocus>
+                Planning openen
+              </button>
+              <button id="new-plan" class="button">
+                Nieuwe planning maken
+              </button>
+            </div>
+            <div class="welcome-alternative">
+              <span>Of</span>
+              <button id="sample-plan" class="text-link">
+                Voorbeeldplanning laden
+              </button>
+            </div>
+          </div>
+          <input
+            id="file-input"
+            type="file"
+            accept=".json,application/json"
+            hidden
+          />
+        </section>
+      </div>
+      <div id="workspace" hidden>
+        <aside class="sidebar">
+          <nav aria-label="Hoofdnavigatie">
+            <a href="#home" data-page="home">Thuis</a>
+            <a href="#manage" data-page="manage">Planning bewerken</a>
+            <a href="#print" data-page="print" class="important"
+              >Planning printen</a
+            >
+            <a href="#handbook-print" data-page="handbook-print"
+              >Werkinstructies printen</a
+            >
+          </nav>
+          <div class="sidebar-actions">
+            <button id="save-plan" class="button primary full">Opslaan</button>
+            <button id="change-plan" class="button full">
+              Terug naar start
+            </button>
+          </div>
+        </aside>
+        <main id="main" tabindex="-1"></main>
+      </div>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+      <dialog id="confirm-dialog">
+        <form method="dialog">
+          <h2 id="confirm-title">Even checken</h2>
+          <p id="confirm-message"></p>
+          <div class="dialog-actions">
+            <button value="cancel" class="button">Annuleren</button
+            ><button value="confirm" class="button danger">Ja, doorgaan</button>
+          </div>
+        </form>
+      </dialog>
+      <dialog id="prompt-dialog">
+        <form method="dialog">
+          <h2 id="prompt-title">Even invullen</h2>
+          <p id="prompt-message"></p>
+          <label><span class="sr-only">Invoer</span><input required /></label>
+          <div class="dialog-actions">
+            <button value="cancel" class="button">Annuleren</button
+            ><button value="confirm" class="button primary">Doorgaan</button>
+          </div>
+        </form>
+      </dialog>
+      <dialog id="handbook-intro-dialog">
+        <form>
+          <h2>Inleiding aanpassen</h2>
+          <p>
+            Pas de tekst aan die bovenaan het geprinte overzicht staat. Gebruik
+            een lege regel tussen alinea's.
+          </p>
+          <label
+            ><span class="sr-only">Inleiding</span
+            ><textarea id="handbook-intro-text" rows="8" required></textarea>
+          </label>
+          <div class="dialog-actions">
+            <button type="button" id="cancel-handbook-intro" class="button">
+              Annuleren</button
+            ><button class="button primary">Opslaan</button>
+          </div>
+        </form>
+      </dialog>
     </div>
-    <div id="workspace" hidden>
-      <aside class="sidebar">
-        <nav aria-label="Hoofdnavigatie">
-          <a href="#home" data-page="home">Thuis</a>
-          <a href="#manage" data-page="manage">Planning beheren</a>
-          <a href="#print" data-page="print" class="important">Planning afdrukken</a>
-          <a href="#handbook-print" data-page="handbook-print">Werkinstructiehandboek afdrukken</a>
-        </nav>
-        <div class="sidebar-actions">
-          <button id="save-plan" class="button primary full">Planning opslaan</button>
-          <button id="change-plan" class="button full">Terug naar startscherm</button>
-        </div>
-      </aside>
-      <main id="main" tabindex="-1"></main>
-    </div>
-    <div id="toast" class="toast" role="status" aria-live="polite"></div>
-    <dialog id="confirm-dialog"><form method="dialog"><h2 id="confirm-title">Bevestigen</h2><p id="confirm-message"></p><div class="dialog-actions"><button value="cancel" class="button">Annuleren</button><button value="confirm" class="button danger">Bevestigen</button></div></form></dialog>
-    <dialog id="prompt-dialog"><form method="dialog"><h2 id="prompt-title">Gegevens invullen</h2><p id="prompt-message"></p><label><span class="sr-only">Invoer</span><input required></label><div class="dialog-actions"><button value="cancel" class="button">Annuleren</button><button value="confirm" class="button primary">Doorgaan</button></div></form></dialog>
-  </div>
-  <script type="module" src="js/app.js?v=33"></script>
-</body>
+    <script type="module" src="js/app.js?v=81"></script>
+  </body>
 </html>

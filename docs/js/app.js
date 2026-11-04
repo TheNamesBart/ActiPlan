@@ -1,36 +1,932 @@
-import {DAYPARTS,DAYPART_TIMES,WEEKDAYS,blankPlan,samplePlan,validatePlan,orderActivities,activitiesForDate,dateKey,parseDate,formatDate,formatMinutes,isoWeek,weeksInYear,dateFromIsoWeek,recurrenceLabel,deadlineWithinDaypart} from "./core.js";
-import {$,esc} from "./ui.js";
-import {confirmDialog,promptDialog} from "./dialogs.js";
-const today=dateKey(new Date());
-const state={plan:null,status:"Geen planning geopend",dirty:false,page:"home",date:today,mode:"week",weekYear:isoWeek(new Date()).year,week:isoWeek(new Date()).week,filters:{q:"",daypart:"",active:"",recurrence:""}};
-const RECOVERY_KEY="actiplan-recovery-v1";
-const persistRecovery=()=>{if(!state.plan||!state.dirty)return;try{localStorage.setItem(RECOVERY_KEY,JSON.stringify({plan:state.plan,savedAt:new Date().toISOString()}))}catch(err){console.error("Herstelversie kon niet worden opgeslagen.",err)}};
-const clearRecovery=()=>{try{localStorage.removeItem(RECOVERY_KEY)}catch(err){console.error("Herstelversie kon niet worden verwijderd.",err)}};
-const setStatus=(text,dirty=state.dirty)=>{state.status=text;state.dirty=dirty;if(dirty)persistRecovery();const statusElement=$("#status"),visible=dirty||["Download gestart","Bestand opgeslagen","Foutmelding"].includes(text);statusElement.textContent=visible?text:"";statusElement.classList.toggle("changed",visible&&dirty);statusElement.style.color=dirty?"#a52a2a":"";statusElement.style.fontWeight=dirty?"bold":"";statusElement.style.animation=dirty?"status-pulse 1.8s ease-out 1":"";$("#file-summary").textContent=state.plan?`${state.plan.metadata.title} · ${state.plan.metadata.department}`:"Geen planning geopend";};
-const toast=(text,error=false)=>{const t=$("#toast");t.textContent=text;t.className=`toast show ${error?"error":""}`;setTimeout(()=>t.className="toast",4000)};
-function pageGuard(){if(!state.plan){$("#welcome").hidden=false;$("#workspace").hidden=true;return false} $("#welcome").hidden=true;$("#workspace").hidden=false;return true}
-function navigate(){state.page=location.hash.slice(1)||"home";if(!pageGuard())return;document.querySelectorAll("[data-page]").forEach(a=>{const selected=a.dataset.page===state.page;a.classList.toggle("selected",selected);if(selected)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});render()}
-function groups(items,print=false){let out="";for(const [key,label] of DAYPARTS){const list=items.filter(a=>a.daypart===key);if(!list.length)continue;out+=`<section class="daypart"><h4>${label} <small>(${DAYPART_TIMES[key]})</small></h4>${list.map(a=>activityCard(a,print)).join("")}</section>`}return out||`<p class="empty">Geen activiteiten gepland.</p>`}
-function activityCard(a,print=false){return `<article class="activity-card ${a.active?"":"inactive"}">${print?'<span class="check">☐</span>':""}<div class="activity-content"><div class="activity-title">${a.deadline?`<span class="deadline${print?" print-deadline":""}" aria-label="Uiterlijk om ${esc(a.deadline)}">◷ ${esc(a.deadline)}</span>`:""}<h4>${esc(a.name)}</h4></div>${a.description?`<p>${esc(a.description)}</p>`:""}${!print?`<small class="activity-meta"><span class="meta-item" title="Herhaling">↻ ${esc(recurrenceLabel(a.recurrence))}</span>${a.durationMinutes?`<span class="meta-item" title="Indicatie uitvoeringsduur">◷ Indicatie ${formatMinutes(a.durationMinutes)}</span>`:""}${a.workInstruction?.trim()?'<span class="meta-item instruction-meta" title="Werkinstructie beschikbaar">✦ Werkinstructie</span>':""}</small>`:""}${print?'<div class="signature"><strong>Naam collega:</strong></div>':""}</div></article>`}
-function render(){const main=$("#main");if(state.page==="home") main.innerHTML=home();if(state.page==="print")main.innerHTML=printPage();if(state.page==="manage")main.innerHTML=manage();if(state.page==="handbook") { location.hash="#manage"; return; }if(state.page==="handbook-print")main.innerHTML=handbook(true);bindPage();main.focus()}
-function home(){return `<section class="hero"><p class="eyebrow">Overzicht</p><h1>${esc(state.plan.metadata.title)}</h1><p class="lead">${esc(state.plan.metadata.description||"Uw activiteitenplanning op één plek.")}</p><div class="home-meta"><div><span>Afdeling</span><strong>${esc(state.plan.metadata.department)}</strong></div><div><span>Activiteiten</span><strong>${state.plan.activities.length}</strong></div><div><span>Status</span><strong>${esc(state.status)}</strong></div></div><a class="button primary large" href="#print">Planning bekijken en afdrukken</a></section>`}
-function printPage(){const date=parseDate(state.date),week=state.mode==="week"?Array.from({length:7},(_,i)=>dateFromIsoWeek(state.weekYear,state.week,i)):[date],pageData=[];week.forEach((d,index)=>{const items=activitiesForDate(state.plan.activities,d),long=items.length>23,first=long?items.slice(0,23):items,rest=long?items.slice(23):[],title=new Intl.DateTimeFormat("nl-NL",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).format(d);pageData.push({title,items:first,long});if(rest.length)pageData.push({title:`${title} <small>— vervolg</small>`,items:rest,long:false});if(state.mode==="week"&&!long&&index<week.length-1)pageData.push({blank:true})});const pages=pageData.map((page,index)=>{if(page.blank)return '<div class="blank-print-page" aria-hidden="true"></div>';const last=index===pageData.length-1;return `<div class="print-page${last?" last-print-page":""}"><h2>${page.title}</h2>${groups(page.items,true)}${page.long?'<p class="back-page-note">↳ Deze planning gaat verder aan de achterzijde van dit blad.</p>':""}</div>`}).join("");return `<section><div class="page-heading"><div><p class="eyebrow">Belangrijkste functie</p><h1>Planning afdrukken</h1></div><button class="button primary" id="print-button">Afdrukken</button></div><div class="toolbar"><label>Weergave<select id="view-mode"><option value="day" ${state.mode==="day"?"selected":""}>Dagplanning</option><option value="week" ${state.mode==="week"?"selected":""}>Weekplanning</option></select></label>${state.mode==="day"?`<label>Datum<input id="date-choice" type="date" value="${state.date}"></label>`:`<label>Jaar<input id="week-year" type="number" min="2000" max="2100" value="${state.weekYear}"></label><label>Weeknummer<input id="week-number" type="number" min="1" max="53" value="${state.week}"></label>`}</div>${state.mode==="week"?`<p class="period">Week ${state.week} · ${formatDate(week[0])} t/m ${formatDate(week[6])}</p>`:""}<div id="print-content" class="${state.mode==="week"?"week-print":""}">${pages}</div></section>`}
-function manage(){const all=state.plan.activities, filtered=orderActivities(all.filter(a=>(!state.filters.q||`${a.name} ${a.description}`.toLowerCase().includes(state.filters.q.toLowerCase()))&&(!state.filters.daypart||a.daypart===state.filters.daypart)&&(state.filters.active===""||String(a.active)===state.filters.active)&&(!state.filters.recurrence||a.recurrence.type===state.filters.recurrence))),restricted=filtered.length!==all.length,hasFilters=Boolean(state.filters.q||state.filters.daypart||state.filters.active||state.filters.recurrence);return `<section><div class="page-heading"><div><p class="eyebrow">Onderhoud</p><h1>Planning beheren</h1></div><button class="button primary" id="add-activity">Activiteit toevoegen</button></div><div class="toolbar filters"><label>Zoeken<input id="filter-q" value="${esc(state.filters.q)}" placeholder="Naam of beschrijving"></label><label>Dagdeel<select id="filter-daypart"><option value="">Alle dagdelen</option>${DAYPARTS.map(x=>`<option value="${x[0]}" ${state.filters.daypart===x[0]?"selected":""}>${x[1]} (${DAYPART_TIMES[x[0]]})</option>`).join("")}</select></label><label>Herhaling<select id="filter-recurrence"><option value="">Alle herhalingen</option><option value="daily" ${state.filters.recurrence==="daily"?"selected":""}>Dagelijks</option><option value="weekly" ${state.filters.recurrence==="weekly"?"selected":""}>Wekelijks</option><option value="monthly" ${state.filters.recurrence==="monthly"?"selected":""}>Maandelijks</option></select></label><label>Status<select id="filter-active"><option value="">Alle</option><option value="true" ${state.filters.active==="true"?"selected":""}>Actief</option><option value="false" ${state.filters.active==="false"?"selected":""}>Inactief</option></select></label>${hasFilters?'<button type="button" class="button small" id="clear-filters">Filters wissen</button>':""}</div>${restricted?'<p class="notice">Wis zoeken en filters om activiteiten te kunnen verplaatsen.</p>':""}<div class="manage-list">${DAYPARTS.map(([key,label])=>`<section class="manage-group"><h2>${label} <small>(${DAYPART_TIMES[key]})</small></h2><div data-dropzone="${key}">${filtered.filter(a=>a.daypart===key).map(a=>manageCard(a,restricted)).join("")||'<p class="empty">Geen activiteiten.</p>'}</div></section>`).join("")}</div></section>`}
-function manageCard(a,restricted){const instruction=a.workInstruction?.trim(),status=a.active?"Actief":"Inactief";return `<article class="manage-card ${a.active?"":"inactive"}" draggable="${!restricted}" data-id="${esc(a.id)}"><span class="drag-handle" title="Verslepen om te sorteren" aria-label="Verslepen om te sorteren">⋮⋮</span><div class="manage-info"><strong>${esc(a.name)}</strong><span>${esc(a.description)}</span><small><span class="meta-item" title="Herhaling">↻ ${esc(recurrenceLabel(a.recurrence))}</span>${a.durationMinutes?`<span class="meta-item" title="Uitvoeringsduur">◷ ${formatMinutes(a.durationMinutes)}</span>`:""}${a.deadline?`<span class="meta-item deadline-meta" title="Uiterlijk uitvoeren">⏰ Uiterlijk ${esc(a.deadline)}</span>`:""}${instruction?'<span class="meta-item instruction-meta" title="Werkinstructie beschikbaar" aria-label="Werkinstructie beschikbaar">✦ Werkinstructie</span>':""}</small></div><span class="status-dot ${a.active?"is-active":"is-inactive"}" title="${status}" aria-label="${status}"></span><div class="manage-actions"><button class="icon-button edit" data-id="${a.id}" title="Bewerken" aria-label="Bewerken">✎</button><button class="icon-button copy" data-id="${a.id}" title="Kopiëren" aria-label="Kopiëren">⧉</button><button class="icon-button delete" data-id="${a.id}" title="Verwijderen" aria-label="Verwijderen">×</button></div></article>`}
-function form(existing){const a=existing||{id:`activity-${Date.now()}`,active:true,name:"",description:"",workInstruction:"",durationMinutes:null,deadline:"",daypart:"morning",sortOrder:0,recurrence:{type:"daily"}};return `<dialog id="activity-dialog"><form id="activity-form"><h2>${existing?"Activiteit bewerken":"Activiteit toevoegen"}</h2><p class="form-help">Velden met <span class="required-mark">*</span> zijn verplicht.</p><input name="id" type="hidden" value="${esc(a.id)}"><label>Naam<span class="required-mark">*</span><input required name="name" value="${esc(a.name)}"></label><label>Korte beschrijving<textarea name="description">${esc(a.description||"")}</textarea></label><label>Werkinstructie<textarea name="workInstruction">${esc(a.workInstruction||"")}</textarea></label><label>Indicatie uitvoeringsduur in minuten<span class="required-mark">*</span><input required name="durationMinutes" type="number" min="1" value="${a.durationMinutes??""}"></label><label>Deadline<input name="deadline" type="time" value="${esc(a.deadline||"")}"><span class="deadline-warning" hidden></span></label><label>Dagdeel<span class="required-mark">*</span><select required name="daypart">${DAYPARTS.map(x=>`<option value="${x[0]}" ${a.daypart===x[0]?"selected":""}>${x[1]} (${DAYPART_TIMES[x[0]]})</option>`).join("")}</select></label><label>Herhaling<span class="required-mark">*</span><select required name="recurrenceType"><option value="daily" ${a.recurrence.type==="daily"?"selected":""}>Dagelijks</option><option value="weekly" ${a.recurrence.type==="weekly"?"selected":""}>Wekelijks</option><option value="monthly" ${a.recurrence.type==="monthly"?"selected":""}>Maandelijks</option></select></label><fieldset class="weekly-fields"><legend>Weekdagen<span class="required-mark">*</span></legend>${WEEKDAYS.map(x=>`<label class="check-label"><input type="checkbox" name="weekday" value="${x[0]}" ${a.recurrence.weekdays?.includes(x[0])?"checked":""}>${x[1]}</label>`).join("")}</fieldset><label class="monthly-field">Dag van de maand<span class="required-mark">*</span><input name="monthDay" type="number" min="1" max="31" value="${a.recurrence.day||1}"></label><label class="check-label"><input type="checkbox" name="active" ${a.active?"checked":""}>Actief</label><div class="dialog-actions"><button type="button" class="button" id="cancel-activity">Annuleren</button><button class="button primary">Opslaan</button></div></form></dialog>`}
-function handbook(print){const list=state.plan.activities.filter(a=>a.workInstruction?.trim()).sort((a,b)=>a.name.localeCompare(b.name,"nl")),printedOn=new Intl.DateTimeFormat("nl-NL",{dateStyle:"long"}).format(new Date());return `<section><div class="page-heading"><div><p class="eyebrow">Kennis</p><h1>Werkinstructiehandboek${print?" afdrukken":" beheren"}</h1></div>${print?'<button class="button primary" id="print-button">Afdrukken</button>':""}</div>${!print?`<div class="toolbar"><label>Zoeken<input id="handbook-q" placeholder="Activiteit of instructie"></label></div>`:""}<div class="handbook">${print?`<article class="handbook-cover"><p class="eyebrow">Werkinstructiehandboek</p><h2>${esc(state.plan.metadata.title)}</h2><p>Dit handboek biedt houvast bij het uitvoeren van de dagelijkse werkzaamheden. De werkinstructies zijn leidend en helpen om taken op een vaste, duidelijke en zorgvuldige manier uit te voeren.</p><p>Volg de beschreven werkwijze en bespreek vragen of afwijkingen met de verantwoordelijke collega.</p><p class="handbook-date">Geprint op ${printedOn}</p></article>`:""}${list.map(a=>`<article class="handbook-entry"><h2>${esc(a.name)}</h2>${a.deadline?`<p class="deadline handbook-deadline">Uiterlijk uitvoeren om ${esc(a.deadline)}</p>`:""}${a.description?`<p><strong>Korte beschrijving</strong>${esc(a.description)}</p>`:""}<p><strong>Werkinstructie</strong>${esc(a.workInstruction)}</p>${a.durationMinutes?`<strong>Indicatie uitvoeringsduur: ${formatMinutes(a.durationMinutes)}</strong>`:""}${!print?`<button class="button small edit" data-id="${a.id}">Bewerken</button>`:""}</article>`).join("")||'<p class="empty">Er zijn nog geen werkinstructies.</p>'}</div></section>`}
-function bindPage(){document.querySelector("#print-button")?.addEventListener("click",()=>window.print());$("#view-mode")?.addEventListener("change",e=>{state.mode=e.target.value;render()});$("#date-choice")?.addEventListener("change",e=>{state.date=e.target.value;render()});$("#week-year")?.addEventListener("change",e=>{state.weekYear=+e.target.value;validateWeek()});$("#week-number")?.addEventListener("change",e=>{state.week=+e.target.value;validateWeek()});$("#add-activity")?.addEventListener("click",()=>showForm());$("#clear-filters")?.addEventListener("click",()=>{state.filters={q:"",daypart:"",active:"",recurrence:""};render()});["filter-q","filter-daypart","filter-recurrence","filter-active"].forEach(id=>$("#"+id)?.addEventListener("input",e=>{const key=id==="filter-q"?"q":id==="filter-daypart"?"daypart":id==="filter-recurrence"?"recurrence":"active";state.filters[key]=e.target.value;const value=e.target.value;render();if(id==="filter-q"){const input=$("#filter-q");input.focus();input.setSelectionRange(value.length,value.length)}}));$("#handbook-q")?.addEventListener("input",e=>{document.querySelectorAll(".handbook-entry").forEach(x=>x.hidden=!x.textContent.toLowerCase().includes(e.target.value.toLowerCase()))});document.querySelectorAll(".edit").forEach(b=>b.addEventListener("click",()=>showForm(state.plan.activities.find(a=>a.id===b.dataset.id))));document.querySelectorAll(".copy").forEach(b=>b.addEventListener("click",()=>copyActivity(b.dataset.id)));document.querySelectorAll(".delete").forEach(b=>b.addEventListener("click",()=>removeActivity(b.dataset.id)));document.querySelectorAll("[data-dropzone]").forEach(z=>z.addEventListener("dragover",e=>{e.preventDefault();const target=e.target.closest("[data-id]");if(target)target.classList.add("drop-target")}));document.querySelectorAll("[data-dropzone]").forEach(z=>z.addEventListener("dragleave",e=>e.target.closest("[data-id]")?.classList.remove("drop-target")));document.querySelectorAll("[draggable=true]").forEach(c=>c.addEventListener("dragstart",e=>e.dataTransfer.setData("text/plain",c.dataset.id)));document.querySelectorAll("[data-dropzone]").forEach(z=>z.addEventListener("drop",e=>{e.preventDefault();const id=e.dataTransfer.getData("text/plain"),target=e.target.closest("[data-id]");document.querySelectorAll(".drop-target").forEach(x=>x.classList.remove("drop-target"));if(id&&target){const after=e.clientY>target.getBoundingClientRect().top+target.getBoundingClientRect().height/2;reorder(id,target.dataset.id,after)}}))}
-function validateWeek(){if(state.week<1||state.week>weeksInYear(state.weekYear)){toast(`Week ${state.week} bestaat niet in ${state.weekYear}.`,true);return}render()}
-function showForm(existing){const wrap=document.createElement("div");wrap.innerHTML=form(existing);const d=wrap.firstElementChild;document.body.append(d);d.showModal();const f=$("#activity-form"), type=f.elements.recurrenceType, monthDay=f.elements.monthDay, deadline=f.elements.deadline, daypart=f.elements.daypart, warning=d.querySelector(".deadline-warning"), updateDeadlineWarning=()=>{const outside=deadline.value&&!deadlineWithinDaypart(deadline.value,daypart.value);warning.hidden=!outside;warning.textContent=outside?`Let op: ${deadline.value} valt buiten de tijden van het gekozen dagdeel (${DAYPART_TIMES[daypart.value]}).`:""}, sync=()=>{const monthly=type.value==="monthly";d.querySelector(".weekly-fields").style.display=type.value==="weekly"?"grid":"none";d.querySelector(".monthly-field").style.display=monthly?"block":"none";monthDay.required=monthly};type.addEventListener("change",sync);deadline.addEventListener("input",updateDeadlineWarning);daypart.addEventListener("change",updateDeadlineWarning);sync();updateDeadlineWarning();$("#cancel-activity").addEventListener("click",()=>d.close());d.addEventListener("close",()=>d.remove(),{once:true});f.addEventListener("submit",e=>{e.preventDefault();const fd=new FormData(f), old=existing, recurrence=type.value==="daily"?{type:"daily"}:type.value==="weekly"?{type:"weekly",weekdays:fd.getAll("weekday")}:{type:"monthly",day:+fd.get("monthDay")};if(type.value==="weekly"&&!recurrence.weekdays.length)return toast("Kies ten minste één weekdag.",true);if(deadline.value&&!deadlineWithinDaypart(deadline.value,daypart.value))toast(`Let op: deadline ${deadline.value} valt buiten het gekozen dagdeel.`,true);const a={id:fd.get("id"),active:fd.has("active"),name:fd.get("name").trim(),description:fd.get("description").trim(),workInstruction:fd.get("workInstruction").trim(),durationMinutes:fd.get("durationMinutes")?+fd.get("durationMinutes"):null,deadline:fd.get("deadline")||null,daypart:fd.get("daypart"),sortOrder:old&&old.daypart===fd.get("daypart")?old.sortOrder:Math.max(-1,...state.plan.activities.filter(x=>x.daypart===fd.get("daypart")&&x.id!==old?.id).map(x=>x.sortOrder))+1,recurrence};const errors=validatePlan({...state.plan,activities:old?state.plan.activities.map(x=>x.id===a.id?a:x):[...state.plan.activities,a]});if(errors.length)return toast(errors[0],true);if(old)state.plan.activities=state.plan.activities.map(x=>x.id===a.id?a:x);else state.plan.activities.push(a);renumber(a.daypart);d.close();setStatus("Wijzigingen nog niet opgeslagen",true);render()})}
-function renumber(daypart){orderActivities(state.plan.activities.filter(a=>a.daypart===daypart)).forEach((a,i)=>a.sortOrder=i)}
-function move(id,direction){const a=state.plan.activities.find(x=>x.id===id), list=orderActivities(state.plan.activities.filter(x=>x.daypart===a.daypart)),i=list.findIndex(x=>x.id===id),j=i+direction;if(j<0||j>=list.length)return;[list[i],list[j]]=[list[j],list[i]];list.forEach((x,n)=>x.sortOrder=n);setStatus("Wijzigingen nog niet opgeslagen",true);render()}
-function reorder(id,targetId,after=false){const a=state.plan.activities.find(x=>x.id===id),t=state.plan.activities.find(x=>x.id===targetId);if(!a||!t||a.daypart!==t.daypart||id===targetId)return;const list=orderActivities(state.plan.activities.filter(x=>x.daypart===a.daypart)).filter(x=>x.id!==id);let index=list.findIndex(x=>x.id===targetId);if(after)index+=1;list.splice(index,0,a);list.forEach((x,i)=>x.sortOrder=i);setStatus("Wijzigingen nog niet opgeslagen",true);render()}
-async function removeActivity(id){const a=state.plan.activities.find(x=>x.id===id);if(!await confirmDialog(`Weet u zeker dat u '${a.name}' wilt verwijderen?`,"Activiteit verwijderen"))return;state.plan.activities=state.plan.activities.filter(x=>x.id!==id);renumber(a.daypart);setStatus("Wijzigingen nog niet opgeslagen",true);render()}
-function copyActivity(id){const source=state.plan.activities.find(x=>x.id===id), copy=JSON.parse(JSON.stringify(source));copy.id=`activity-${Date.now()}`;copy.name=`${source.name} (kopie)`;copy.sortOrder=Math.max(-1,...state.plan.activities.filter(a=>a.daypart===source.daypart).map(a=>a.sortOrder))+1;state.plan.activities.push(copy);setStatus("Wijzigingen nog niet opgeslagen",true);render();toast("Activiteit gekopieerd.")}
-async function returnToStart(){if(state.dirty&&!await confirmDialog("Er zijn niet-opgeslagen wijzigingen. Wilt u teruggaan naar het startscherm?","Terug naar startscherm"))return;clearRecovery();state.plan=null;state.dirty=false;state.status="Geen planning geopend";state.page="home";location.hash="#home";navigate()}
-function loadPlan(plan,status="Geen wijzigingen",page="#print"){const errors=validatePlan(plan);if(errors.length){toast(`Planning niet geladen: ${errors[0]}`,true);return}state.plan=JSON.parse(JSON.stringify(plan));setStatus(status,status==="Nieuwe planning – nog niet opgeslagen"||status==="Herstelversie hersteld");location.hash=page;navigate()}
-$("#open-plan").onclick=()=>$("#file-input").click();$("#file-input").onchange=async e=>{const file=e.target.files[0];if(!file)return;try{loadPlan(JSON.parse(await file.text()))}catch(err){toast(`Bestand kon niet worden gelezen: ${err.message}`,true)}e.target.value=""};
-$("#new-plan").onclick=async()=>{const title=await promptDialog("Naam van de planning:","Nieuwe planning","Nieuwe planning");if(!title?.trim())return;const department=await promptDialog("Afdeling:","Mijn afdeling","Nieuwe planning");if(title?.trim()&&department?.trim())loadPlan(blankPlan(title.trim(),department.trim()),"Nieuwe planning – nog niet opgeslagen","#manage")};
-$("#sample-plan").onclick=()=>loadPlan(samplePlan(),"Geen wijzigingen");
-$("#save-plan").onclick=async()=>{if(!state.plan)return;const json=JSON.stringify(state.plan,null,2),now=new Date(),pad=n=>String(n).padStart(2,"0"),stamp=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`,name=`${stamp}-${state.plan.metadata.title}-${state.plan.metadata.department}`.toLowerCase().replace(/[^a-z0-9-]+/g,"-").replace(/^-|-$/g,"")+".json";try{if(window.showSaveFilePicker){const handle=await window.showSaveFilePicker({suggestedName:name,types:[{description:"ActiPlan JSON",accept:{"application/json":[".json"]}}]});const writable=await handle.createWritable();await writable.write(json);await writable.close();clearRecovery();setStatus("Bestand opgeslagen",false);toast("Planning opgeslagen.");return}const blob=new Blob([json],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();URL.revokeObjectURL(a.href);clearRecovery();setStatus("Download gestart",false);toast("Download gestart. Controleer of het bestand is opgeslagen.")}catch(err){if(err.name!=="AbortError"){setStatus("Foutmelding",state.dirty);toast(`Opslaan mislukt: ${err.message}`,true)}}};
-const requestOpen=async()=>{if(state.dirty&&!await confirmDialog("Er zijn niet-opgeslagen wijzigingen. Wilt u deze planning verlaten?","Planning openen"))return;$("#file-input").click()};const restoreRecovery=async()=>{let raw;try{raw=localStorage.getItem(RECOVERY_KEY)}catch(err){console.error("Herstelversie kon niet worden gelezen.",err);return false}if(!raw)return false;try{const recovery=JSON.parse(raw),savedAt=new Date(recovery.savedAt),when=Number.isNaN(savedAt.getTime())?"onbekend":new Intl.DateTimeFormat("nl-NL",{dateStyle:"medium",timeStyle:"short"}).format(savedAt),restore=await confirmDialog(`Er is een niet-opgeslagen herstelversie van ${when}. Wilt u deze herstellen?`,"Herstelversie gevonden");if(!restore){clearRecovery();return false}loadPlan(recovery.plan,"Herstelversie hersteld",location.hash||"#manage");return true}catch(err){clearRecovery();console.error("Herstelversie is ongeldig.",err);return false}};$("#change-plan").onclick=returnToStart;$("#open-plan").onclick=requestOpen;window.addEventListener("hashchange",navigate);window.addEventListener("beforeunload",e=>{if(state.dirty){persistRecovery();e.preventDefault();e.returnValue=""}});(async()=>{if(!(await restoreRecovery()))navigate()})();
+import {
+  DAYPARTS,
+  WEEKDAYS,
+  MONTHLY_OCCURRENCES,
+  blankPlan,
+  samplePlan,
+  validatePlan,
+  orderActivities,
+  activitiesForDate,
+  dateKey,
+  parseDate,
+  formatDate,
+  formatMinutes,
+  isoWeek,
+  weeksInYear,
+  dateFromIsoWeek,
+  recurrenceLabel,
+} from "./core.js?v=3";
+import { $, esc } from "./ui.js";
+import { confirmDialog, promptDialog } from "./dialogs.js?v=4";
+const today = dateKey(new Date());
+const state = {
+  plan: null,
+  status: "Geen planning geopend",
+  dirty: false,
+  lastUpdated: null,
+  page: "home",
+  date: today,
+  mode: "week",
+  weekYear: isoWeek(new Date()).year,
+  week: isoWeek(new Date()).week,
+  filters: { q: "", day: "", active: "", recurrence: "" },
+};
+const RECOVERY_KEY = "actiplan-recovery-v1";
+const timeValue = (plan, day, key) => plan.metadata.daypartTimes[day][key];
+const daypartTimeMap = (plan) =>
+  Object.fromEntries(
+    WEEKDAYS.map(([day]) => [
+      day,
+      Object.fromEntries(
+        DAYPARTS.map(([key]) => [key, timeValue(plan, day, key)]),
+      ),
+    ]),
+  );
+const timeToMinutes = (value) => {
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
+};
+const persistRecovery = () => {
+  if (!state.plan || !state.dirty) return;
+  try {
+    localStorage.setItem(
+      RECOVERY_KEY,
+      JSON.stringify({ plan: state.plan, savedAt: new Date().toISOString() }),
+    );
+  } catch (err) {
+    console.error("Herstelversie kon niet worden opgeslagen.", err);
+  }
+};
+const clearRecovery = () => {
+  try {
+    localStorage.removeItem(RECOVERY_KEY);
+  } catch (err) {
+    console.error("Herstelversie kon niet worden verwijderd.", err);
+  }
+};
+const setStatus = (text, dirty = state.dirty) => {
+  state.status = text;
+  state.dirty = dirty;
+  if (dirty) {
+    state.lastUpdated = new Date().toISOString();
+    persistRecovery();
+  }
+  const statusElement = $("#status"),
+    saveButton = $("#save-plan");
+  statusElement.textContent = text;
+  statusElement.hidden = !state.plan;
+  statusElement.classList.toggle("changed", dirty);
+  if (saveButton) {
+    saveButton.textContent = dirty ? "Wijzigingen opslaan" : "Opslaan";
+    saveButton.classList.toggle("save-plan-needed", dirty);
+  }
+  const title = state.plan?.metadata.title,
+    department = state.plan?.metadata.department,
+    summary =
+      title && department && title === `Planning ${department}`
+        ? title
+        : title && department
+          ? `${title} · ${department}`
+          : "Geen planning geopend";
+  $("#file-summary").textContent = summary;
+};
+const toast = (text, error = false) => {
+  const t = $("#toast");
+  t.textContent = text;
+  t.className = `toast show ${error ? "error" : ""}`;
+  setTimeout(() => (t.className = "toast"), 4000);
+};
+function pageGuard() {
+  const statusElement = $("#status");
+  if (!state.plan) {
+    $("#welcome").hidden = false;
+    $("#workspace").hidden = true;
+    statusElement.hidden = true;
+    return false;
+  }
+  $("#welcome").hidden = true;
+  $("#workspace").hidden = false;
+  statusElement.hidden = false;
+  return true;
+}
+function navigate() {
+  state.page = location.hash.slice(1) || "home";
+  if (!pageGuard()) return;
+  document.querySelectorAll("[data-page]").forEach((a) => {
+    const selected = a.dataset.page === state.page;
+    a.classList.toggle("selected", selected);
+    if (selected) a.setAttribute("aria-current", "page");
+    else a.removeAttribute("aria-current");
+  });
+  render();
+}
+function groups(items, print = false, day) {
+  let out = "";
+  for (const [key, label] of DAYPARTS) {
+    const list = items.filter((a) => a.daypart === key);
+    if (!list.length) continue;
+    out += `<section class="daypart"><h4>${label} <small>(${timeValue(state.plan, day, key)})</small></h4>${list.map((a) => activityCard(a, print)).join("")}</section>`;
+  }
+  return out || `<p class="empty">Geen activiteiten gepland.</p>`;
+}
+function activityCard(a, print = false) {
+  return `<article class="activity-card ${a.active ? "" : "inactive"}">${print ? '<span class="check">☐</span>' : ""}<div class="activity-content"><div class="activity-title">${a.deadline ? `<span class="deadline${print ? " print-deadline" : ""}" aria-label="Uiterlijk om ${esc(a.deadline)}">◷ ${esc(a.deadline)}</span>` : ""}<h4>${esc(a.name)}</h4></div>${a.description ? `<p>${esc(a.description)}</p>` : ""}${!print ? `<small class="activity-meta"><span class="meta-item" title="Herhaling">↻ ${esc(recurrenceLabel(a.recurrence))}</span>${a.durationMinutes ? `<span class="meta-item" title="Indicatie uitvoeringsduur">◷ Indicatie ${formatMinutes(a.durationMinutes)}</span>` : ""}${a.workInstruction?.trim() ? '<span class="meta-item instruction-meta" title="Werkinstructie beschikbaar">✦ Werkinstructie</span>' : ""}</small>` : ""}${print ? '<div class="signature"><strong>Uitgevoerd door:</strong></div>' : ""}</div></article>`;
+}
+function render() {
+  const main = $("#main");
+  if (state.page === "home") main.innerHTML = home();
+  if (state.page === "print") main.innerHTML = printPage();
+  if (state.page === "manage") main.innerHTML = manage();
+  if (state.page === "handbook") {
+    location.hash = "#manage";
+    return;
+  }
+  if (state.page === "handbook-print") main.innerHTML = handbook(true);
+  bindPage();
+  main.focus();
+}
+function home() {
+  const activeActivities = state.plan.activities.filter((a) => a.active),
+    activeCount = activeActivities.length,
+    lastUpdated = state.lastUpdated
+      ? new Intl.DateTimeFormat("nl-NL", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        }).format(new Date(state.lastUpdated))
+      : "Nog niet gewijzigd",
+    fileStatus = state.dirty
+      ? "Niet opgeslagen"
+      : state.plan.metadata.updatedAt
+        ? "Opgeslagen"
+        : "Nog niet opgeslagen",
+    dailySummaries = Array.from({ length: 7 }, (_, index) => {
+      const day = WEEKDAYS[index][0],
+        activities = activitiesForDate(
+          activeActivities,
+          dateFromIsoWeek(state.weekYear, state.week, index),
+        ),
+        dailyCapacity = DAYPARTS.reduce((sum, [key]) => {
+          const [start, end] = timeValue(state.plan, day, key).split("–");
+          return sum + timeToMinutes(end) - timeToMinutes(start);
+        }, 0);
+      return {
+        count: activities.length,
+        duration: activities.reduce((sum, a) => sum + a.durationMinutes, 0),
+        capacity: dailyCapacity,
+      };
+    });
+  return `<section class="hero"><div class="page-heading"><div><p class="eyebrow">Overzicht</p><h1>${esc(state.plan.metadata.title)}</h1></div><button type="button" class="button" id="edit-opening-times">Dagdelen aanpassen</button></div><p class="lead">Hier vind je een overzicht van je planning en activiteiten.</p><div class="home-meta"><div class="home-meta-primary"><span>Afdeling</span><strong>${esc(state.plan.metadata.department)}</strong></div><div class="home-meta-primary"><span>Actieve activiteiten</span><strong>${activeCount} van ${state.plan.activities.length}</strong></div><div><span>Bestandsstatus</span><strong class="${state.dirty ? "is-unsaved" : "is-saved"}">${fileStatus}</strong></div><div><span>Laatst gewijzigd</span><strong>${esc(lastUpdated)}</strong></div></div><section class="daily-overview" aria-labelledby="daily-overview-title"><div class="daily-overview-heading"><h2 id="daily-overview-title">Activiteiten per dag</h2><span>Deze week</span></div><div class="daily-counts">${dailySummaries
+    .map((summary, index) => {
+      const percentage = Math.round(
+          (summary.duration / summary.capacity) * 100,
+        ),
+        status =
+          percentage > 100
+            ? "is-over"
+            : percentage > 75
+              ? "is-warning"
+              : "is-ok";
+      return `<div class="daily-summary"><span>${WEEKDAYS[index][1].slice(0, 2)}</span><strong>${summary.count}</strong><small>${formatMinutes(summary.duration)}</small><progress class="daily-load-track ${status}" aria-label="Geschatte taakduur ${WEEKDAYS[index][1]}" value="${summary.duration}" max="${summary.capacity}"></progress></div>`;
+    })
+    .join(
+      "",
+    )}</div></section><a class="button primary large" href="#print">Planning bekijken en printen</a></section>`;
+}
+function printPage() {
+  const date = parseDate(state.date),
+    week =
+      state.mode === "week"
+        ? Array.from({ length: 7 }, (_, i) =>
+            dateFromIsoWeek(state.weekYear, state.week, i),
+          )
+        : [date],
+    dayPages = week.map((d) => {
+      const items = activitiesForDate(state.plan.activities, d),
+        title = new Intl.DateTimeFormat("nl-NL", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }).format(d),
+        day = WEEKDAYS[(d.getDay() + 6) % 7][0],
+        rest = items.slice(23),
+        pages = [
+          { title, day, items: items.slice(0, 23), long: rest.length > 0 },
+        ];
+      if (state.mode === "week" || rest.length)
+        pages.push({
+          title: `${title} <small>— vervolg</small>`,
+          day,
+          items: rest,
+          long: false,
+          blank: state.mode === "week" && rest.length === 0,
+        });
+      return pages;
+    }),
+    pageData = dayPages.flat(),
+    hasPages = pageData.some((page) => page.items.length),
+    emptyPlan = !state.plan.activities.length,
+    emptyMessage = emptyPlan
+      ? "Voeg eerst een activiteit toe voordat je gaat printen."
+      : state.mode === "day"
+        ? "Op deze dag staan geen activiteiten gepland. Kies een andere dag."
+        : "In deze week staan geen activiteiten gepland. Kies een andere week.";
+  const pages = pageData
+    .map((page, index) => {
+      const last = index === pageData.length - 1;
+      if (page.blank)
+        return `<div class="print-page blank-print-page${last ? " last-print-page" : ""}" aria-hidden="true"></div>`;
+      return `<div class="print-page${last ? " last-print-page" : ""}"><h2>${page.title}</h2>${groups(page.items, true, page.day)}${page.long ? '<p class="back-page-note">↳ Deze planning gaat verder op de achterkant van dit blad.</p>' : ""}</div>`;
+    })
+    .join("");
+  if (emptyPlan)
+    return `<section><div class="page-heading"><div><p class="eyebrow">Printen</p><h1>Planning printen</h1></div></div><p class="notice print-empty">${emptyMessage}</p><a class="button primary" href="#manage">Activiteit toevoegen</a></section>`;
+  return `<section><div class="page-heading"><div><p class="eyebrow">Printen</p><h1>Planning printen</h1></div><button class="button primary" id="print-button" ${hasPages ? "" : "disabled"}>Printen</button></div><div class="toolbar"><div class="view-switcher" role="group" aria-label="Kies een weergave"><span class="view-switcher-label">Weergave</span><div class="view-switcher-options"><button type="button" class="${state.mode === "day" ? "selected" : ""}" data-view-mode="day" aria-pressed="${state.mode === "day"}">Dag</button><button type="button" class="${state.mode === "week" ? "selected" : ""}" data-view-mode="week" aria-pressed="${state.mode === "week"}">Week</button></div></div>${state.mode === "day" ? `<label>Datum<input id="date-choice" type="date" required value="${state.date}"></label>` : `<label>Jaar<input id="week-year" type="number" min="2000" max="2100" value="${state.weekYear}"></label><label>Weeknummer<input id="week-number" type="number" min="1" max="53" value="${state.week}"></label>`}</div>${state.mode === "week" ? `<p class="period">Week ${state.week} · ${formatDate(week[0])} t/m ${formatDate(week[6])}</p>` : ""}${hasPages ? `<div id="print-content" class="${state.mode === "week" ? "week-print" : ""}">${pages}</div>` : `<p class="notice print-empty">${emptyMessage}</p>`}</section>`;
+}
+function activityMatchesDay(activity, day) {
+  return (
+    activity.recurrence.type === "daily" ||
+    (activity.recurrence.type === "monthly" &&
+      activity.recurrence.weekday === day) ||
+    activity.recurrence.weekdays?.includes(day)
+  );
+}
+function capacitySummary(all, key, day) {
+  if (!day) return "";
+  const [start, end] = timeValue(state.plan, day, key).split("–"),
+    available = timeToMinutes(end) - timeToMinutes(start),
+    fixed = all
+      .filter(
+        (a) =>
+          a.active &&
+          a.daypart === key &&
+          (a.recurrence.type === "daily" ||
+            (a.recurrence.type === "weekly" &&
+              a.recurrence.weekdays.includes(day))),
+      )
+      .reduce((sum, a) => sum + a.durationMinutes, 0),
+    monthlyGroups = new Map();
+  all
+    .filter(
+      (a) =>
+        a.active &&
+        a.daypart === key &&
+        a.recurrence.type === "monthly" &&
+        a.recurrence.weekday === day,
+    )
+    .forEach((a) => {
+      const groupKey = `${a.recurrence.occurrence}-${a.recurrence.weekday}`;
+      monthlyGroups.set(
+        groupKey,
+        (monthlyGroups.get(groupKey) || 0) + a.durationMinutes,
+      );
+    });
+  const monthlyRows = [...monthlyGroups]
+      .map(([groupKey, duration]) => {
+        const [occurrence, weekday] = groupKey.split("-"),
+          occurrenceLabel =
+            MONTHLY_OCCURRENCES.find(([key]) => key === occurrence)?.[1] ||
+            occurrence,
+          weekdayLabel =
+            WEEKDAYS.find(([key]) => key === weekday)?.[1] || weekday;
+        return `<div class="capacity-monthly-row"><span>+${duration} min</span><strong>${occurrenceLabel} ${weekdayLabel}</strong></div>`;
+      })
+      .join(""),
+    percentage = Math.round((fixed / available) * 100),
+    status =
+      percentage > 100 ? "is-over" : percentage > 75 ? "is-warning" : "is-ok";
+  return `<div class="capacity-summary"><div class="capacity-main"><div class="capacity-label"><span>Belasting <button type="button" class="capacity-info" aria-expanded="false" aria-label="Uitleg capaciteitsbalk">ⓘ</button><span class="capacity-info-text" hidden>De balk gaat uit van één collega die het volledige dagdeel beschikbaar is. Pauzes zijn niet meegerekend.</span></span><strong>${fixed} / ${available} min · ${percentage}%</strong></div><progress class="capacity-track ${status}" aria-label="Belasting" value="${fixed}" max="${available}"></progress>${percentage > 100 ? `<small class="capacity-warning">Dit dagdeel is ${fixed - available} minuten overvol gepland.</small>` : ""}</div>${monthlyRows ? `<div class="capacity-monthly"><span>Maandelijkse aanvullingen</span>${monthlyRows}</div>` : ""}</div>`;
+}
+function manage() {
+  const all = state.plan.activities,
+    filtered = orderActivities(
+      all.filter(
+        (a) =>
+          (!state.filters.q ||
+            `${a.name} ${a.description}`
+              .toLowerCase()
+              .includes(state.filters.q.toLowerCase())) &&
+          (!state.filters.day || activityMatchesDay(a, state.filters.day)) &&
+          (state.filters.active === "" ||
+            String(a.active) === state.filters.active) &&
+          (!state.filters.recurrence ||
+            a.recurrence.type === state.filters.recurrence),
+      ),
+    ),
+    restricted = filtered.length !== all.length,
+    hasFilters = Boolean(
+      state.filters.q ||
+        state.filters.day ||
+        state.filters.active ||
+        state.filters.recurrence,
+    );
+  return `<section><div class="page-heading"><div><p class="eyebrow">Aan de slag</p><h1>Planning bewerken</h1></div><button class="button primary" id="add-activity">Activiteit toevoegen</button></div><div class="toolbar filters"><label>Zoeken<input id="filter-q" value="${esc(state.filters.q)}" placeholder="Naam of beschrijving"></label><label class="day-filter-label"><span>Dag <button type="button" class="filter-info" aria-expanded="false" aria-label="Uitleg geplande tijd">ⓘ</button><span class="filter-info-text" hidden>Selecteer een dag voor meer inzicht in de geplande tijd per dagdeel.</span></span><select id="filter-day"><option value="">Alle dagen</option>${WEEKDAYS.map((x) => `<option value="${x[0]}" ${state.filters.day === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Herhaling<select id="filter-recurrence"><option value="">Alle herhalingen</option><option value="daily" ${state.filters.recurrence === "daily" ? "selected" : ""}>Dagelijks</option><option value="weekly" ${state.filters.recurrence === "weekly" ? "selected" : ""}>Wekelijks</option><option value="monthly" ${state.filters.recurrence === "monthly" ? "selected" : ""}>Maandelijks</option></select></label><label>Status<select id="filter-active"><option value="">Alle</option><option value="true" ${state.filters.active === "true" ? "selected" : ""}>Actief</option><option value="false" ${state.filters.active === "false" ? "selected" : ""}>Inactief</option></select></label>${hasFilters ? '<button type="button" class="button small" id="clear-filters">Filters wissen</button>' : ""}</div>${restricted ? '<p class="manage-restricted">🔒 Verslepen is uitgeschakeld zolang er filters actief zijn.</p>' : ""}<div class="manage-list">${DAYPARTS.map(
+    ([key, label]) =>
+      `<section class="manage-group"><h2>${label} <small>(${timeValue(state.plan, state.filters.day || "mon", key)})</small></h2>${capacitySummary(all, key, state.filters.day)}<div data-dropzone="${key}">${
+        filtered
+          .filter((a) => a.daypart === key)
+          .map((a) => manageCard(a, restricted))
+          .join("") || '<p class="empty">Geen activiteiten.</p>'
+      }</div></section>`,
+  ).join("")}</div></section>`;
+}
+function manageCard(a, restricted) {
+  const instruction = a.workInstruction?.trim();
+  return `<article class="manage-card ${a.active ? "" : "inactive"}" draggable="${!restricted}" data-id="${esc(a.id)}"><span class="drag-handle" title="Verslepen om te sorteren" aria-label="Verslepen om te sorteren">⋮⋮</span><div class="manage-info"><strong>${esc(a.name)}</strong><span>${esc(a.description)}</span><small><span class="meta-item" title="Herhaling">↻ ${esc(recurrenceLabel(a.recurrence))}</span>${a.durationMinutes ? `<span class="meta-item" title="Uitvoeringsduur">◷ ${formatMinutes(a.durationMinutes)}</span>` : ""}${a.deadline ? `<span class="deadline" aria-label="Uiterlijk om ${esc(a.deadline)}">◷ ${esc(a.deadline)}</span>` : ""}${instruction ? '<span class="meta-item instruction-meta" title="Werkinstructie beschikbaar" aria-label="Werkinstructie beschikbaar">✦ Werkinstructie</span>' : ""}</small></div><div class="manage-actions"><button class="icon-button edit" data-id="${a.id}" title="Bewerken" aria-label="Bewerken">✎</button><button class="icon-button copy" data-id="${a.id}" title="Kopiëren" aria-label="Kopiëren">⧉</button><button class="icon-button delete" data-id="${a.id}" title="Verwijderen" aria-label="Verwijderen">×</button></div></article>`;
+}
+function form(existing) {
+  const a = existing || {
+    id: `activity-${Date.now()}`,
+    active: true,
+    name: "",
+    description: "",
+    workInstruction: "",
+    durationMinutes: null,
+    deadline: "",
+    daypart: "morning",
+    sortOrder: 0,
+    recurrence: { type: "daily" },
+  };
+  return `<dialog id="activity-dialog"><form id="activity-form"><h2>${existing ? "Activiteit bewerken" : "Activiteit toevoegen"}</h2><p class="form-help">Velden met <span class="required-mark">*</span> zijn verplicht.</p><input name="id" type="hidden" value="${esc(a.id)}"><label>Naam<span class="required-mark">*</span><input required name="name" value="${esc(a.name)}"></label><label>Korte beschrijving<textarea name="description">${esc(a.description || "")}</textarea></label><label>Werkinstructie<textarea name="workInstruction">${esc(a.workInstruction || "")}</textarea></label><label>Indicatie uitvoeringsduur in minuten<span class="required-mark">*</span><input required name="durationMinutes" type="number" min="1" value="${a.durationMinutes ?? ""}"></label><label>Deadline<input name="deadline" type="time" value="${esc(a.deadline || "")}"><span class="deadline-warning" hidden></span></label><label>Dagdeel<span class="required-mark">*</span><select required name="daypart">${DAYPARTS.map((x) => `<option value="${x[0]}" ${a.daypart === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Herhaling<span class="required-mark">*</span><select required name="recurrenceType"><option value="daily" ${a.recurrence.type === "daily" ? "selected" : ""}>Dagelijks</option><option value="weekly" ${a.recurrence.type === "weekly" ? "selected" : ""}>Wekelijks</option><option value="monthly" ${a.recurrence.type === "monthly" ? "selected" : ""}>Maandelijks</option></select></label><fieldset class="weekly-fields"><legend>Weekdagen<span class="required-mark">*</span></legend>${WEEKDAYS.map((x) => `<label class="check-label"><input type="checkbox" name="weekday" value="${x[0]}" ${a.recurrence.weekdays?.includes(x[0]) ? "checked" : ""}>${x[1]}</label>`).join("")}</fieldset><div class="monthly-fields"><label>Week van de maand<span class="required-mark">*</span><select name="monthOccurrence">${MONTHLY_OCCURRENCES.map((x) => `<option value="${x[0]}" ${String(a.recurrence.occurrence) === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Weekdag<span class="required-mark">*</span><select name="monthWeekday">${WEEKDAYS.map((x) => `<option value="${x[0]}" ${a.recurrence.weekday === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label></div><label class="check-label"><input type="checkbox" name="active" ${a.active ? "checked" : ""}>Actief</label><div class="dialog-actions"><button type="button" class="button" id="cancel-activity">Annuleren</button><button class="button primary">Opslaan</button></div></form></dialog>`;
+}
+const handbookIntro = () => state.plan.metadata.handbookIntro;
+function editHandbookIntro() {
+  const dialog = $("#handbook-intro-dialog"),
+    textarea = $("#handbook-intro-text");
+  textarea.value = handbookIntro().join("\n\n");
+  dialog.showModal();
+  const close = () => {
+    dialog.removeEventListener("close", close);
+  };
+  dialog.addEventListener("close", close, { once: true });
+  $("#cancel-handbook-intro").onclick = () => dialog.close("cancel");
+  dialog.querySelector("form").onsubmit = (e) => {
+    e.preventDefault();
+    const paragraphs = textarea.value
+      .split(/\n\s*\n/)
+      .map((x) => x.trim())
+      .filter(Boolean);
+    if (!paragraphs.length) return toast("Vul ten minste één alinea in.", true);
+    state.plan.metadata.handbookIntro = paragraphs;
+    dialog.close("confirm");
+    setStatus("Wijzigingen nog niet opgeslagen", true);
+    render();
+  };
+}
+function handbook(print) {
+  const list = state.plan.activities
+      .filter((a) => a.workInstruction?.trim())
+      .sort((a, b) => a.name.localeCompare(b.name, "nl")),
+    printedOn = new Intl.DateTimeFormat("nl-NL", { dateStyle: "long" }).format(
+      new Date(),
+    ),
+    intro = handbookIntro();
+  return `<section><div class="page-heading"><div><p class="eyebrow">Handige info</p><h1>Werkinstructies${print ? " printen" : " bekijken"}</h1></div><div class="handbook-actions">${print ? '<button class="button primary" id="print-button">Printen</button>' : ""}<button type="button" class="icon-button handbook-edit" id="edit-handbook-intro" title="Inleiding aanpassen" aria-label="Inleiding aanpassen">✎</button></div></div>${!print ? `<div class="toolbar"><label>Zoeken<input id="handbook-q" placeholder="Activiteit of instructie"></label></div>` : ""}<div class="handbook">${print ? `<article class="handbook-cover"><p class="eyebrow">Werkinstructies</p><h2>${esc(state.plan.metadata.title)}</h2>${intro.map((paragraph) => `<p>${esc(paragraph)}</p>`).join("")}<p class="handbook-date">Geprint op ${printedOn}</p></article>` : ""}${list.map((a) => `<article class="handbook-entry"><h2>${esc(a.name)}</h2>${a.deadline ? `<p class="deadline handbook-deadline">Uiterlijk om ${esc(a.deadline)}</p>` : ""}${a.description ? `<p><strong>Korte beschrijving</strong>${esc(a.description)}</p>` : ""}<p><strong>Werkinstructie</strong>${esc(a.workInstruction)}</p>${a.durationMinutes ? `<strong>Indicatie uitvoeringsduur: ${formatMinutes(a.durationMinutes)}</strong>` : ""}${!print ? `<button class="button small edit" data-id="${a.id}">Bewerken</button>` : ""}</article>`).join("") || '<p class="empty">Er zijn nog geen werkinstructies.</p>'}</div></section>`;
+}
+function editOpeningTimes() {
+  const dialog = document.createElement("dialog");
+  dialog.className = "opening-times-dialog";
+  dialog.innerHTML = `<form><h2>Dagdelen aanpassen</h2><p>Stel per dag de tijden van elk dagdeel in. Deze tijden worden gebruikt voor de planning en de tijdsbelasting.</p><div class="opening-times-table-wrap"><table class="opening-times-table"><thead><tr><th scope="col">Dag</th>${DAYPARTS.map(([, part]) => `<th scope="col">${part}</th>`).join("")}</tr></thead><tbody>${WEEKDAYS.map(
+    ([day, label]) =>
+      `<tr><th scope="row">${label}</th>${DAYPARTS.map(([key]) => {
+        const [start, end] = timeValue(state.plan, day, key).split("–");
+        return `<td><div class="opening-time-range"><input aria-label="${label} ${key} begintijd" required type="time" data-day="${day}" data-part="${key}" data-edge="start" value="${start}"><span>tot</span><input aria-label="${label} ${key} eindtijd" required type="time" data-day="${day}" data-part="${key}" data-edge="end" value="${end}"></div></td>`;
+      }).join("")}</tr>`,
+  ).join(
+    "",
+  )}</tbody></table></div><div class="dialog-actions"><button type="button" class="button" id="cancel-opening-times">Annuleren</button><button class="button primary">Opslaan</button></div></form>`;
+  document.body.append(dialog);
+  dialog.showModal();
+  dialog.querySelector("#cancel-opening-times").onclick = () => dialog.close();
+  dialog.querySelector("form").onsubmit = (e) => {
+    e.preventDefault();
+    const values = daypartTimeMap(state.plan);
+    for (const field of dialog.querySelectorAll("input[data-day]")) {
+      const day = field.dataset.day,
+        part = field.dataset.part;
+      values[day][part] =
+        field.dataset.edge === "start"
+          ? `${field.value}–${values[day][part].split("–")[1]}`
+          : `${values[day][part].split("–")[0]}–${field.value}`;
+    }
+    for (const [day] of WEEKDAYS)
+      for (const [key] of DAYPARTS)
+        if (
+          timeToMinutes(values[day][key].split("–")[1]) <=
+          timeToMinutes(values[day][key].split("–")[0])
+        )
+          return toast(
+            `${WEEKDAYS.find(([id]) => id === day)[1]}: eindtijd moet na de begintijd liggen.`,
+            true,
+          );
+    state.plan.metadata.daypartTimes = values;
+    dialog.close();
+    dialog.addEventListener("close", () => dialog.remove(), { once: true });
+    setStatus("Wijzigingen nog niet opgeslagen", true);
+    render();
+  };
+  dialog.addEventListener("close", () => dialog.remove(), { once: true });
+}
+function bindPage() {
+  document
+    .querySelector("#print-button")
+    ?.addEventListener("click", () => window.print());
+  $("#edit-opening-times")?.addEventListener("click", editOpeningTimes);
+  document.querySelectorAll(".capacity-info,.filter-info").forEach((button) =>
+    button.addEventListener("click", () => {
+      const text = button.nextElementSibling,
+        expanded = button.getAttribute("aria-expanded") === "true";
+      button.setAttribute("aria-expanded", String(!expanded));
+      text.hidden = expanded;
+    }),
+  );
+  $("#edit-handbook-intro")?.addEventListener("click", editHandbookIntro);
+  document.querySelectorAll("[data-view-mode]").forEach((button) =>
+    button.addEventListener("click", () => {
+      state.mode = button.dataset.viewMode;
+      render();
+    }),
+  );
+  $("#date-choice")?.addEventListener("change", (e) => {
+    if (!e.target.value || Number.isNaN(parseDate(e.target.value).getTime())) {
+      e.target.value = state.date;
+      return;
+    }
+    state.date = e.target.value;
+    render();
+  });
+  $("#week-year")?.addEventListener("change", (e) => {
+    state.weekYear = +e.target.value;
+    validateWeek();
+  });
+  $("#week-number")?.addEventListener("change", (e) => {
+    state.week = +e.target.value;
+    validateWeek();
+  });
+  $("#add-activity")?.addEventListener("click", () => showForm());
+  $("#clear-filters")?.addEventListener("click", () => {
+    state.filters = { q: "", day: "", active: "", recurrence: "" };
+    render();
+  });
+  ["filter-q", "filter-day", "filter-recurrence", "filter-active"].forEach(
+    (id) =>
+      $("#" + id)?.addEventListener("input", (e) => {
+        const key =
+          id === "filter-q"
+            ? "q"
+            : id === "filter-day"
+              ? "day"
+              : id === "filter-recurrence"
+                ? "recurrence"
+                : "active";
+        state.filters[key] = e.target.value;
+        const value = e.target.value;
+        render();
+        if (id === "filter-q") {
+          const input = $("#filter-q");
+          input.focus();
+          input.setSelectionRange(value.length, value.length);
+        }
+      }),
+  );
+  $("#handbook-q")?.addEventListener("input", (e) => {
+    document
+      .querySelectorAll(".handbook-entry")
+      .forEach(
+        (x) =>
+          (x.hidden = !x.textContent
+            .toLowerCase()
+            .includes(e.target.value.toLowerCase())),
+      );
+  });
+  document
+    .querySelectorAll(".edit")
+    .forEach((b) =>
+      b.addEventListener("click", () =>
+        showForm(state.plan.activities.find((a) => a.id === b.dataset.id)),
+      ),
+    );
+  document
+    .querySelectorAll(".copy")
+    .forEach((b) =>
+      b.addEventListener("click", () => copyActivity(b.dataset.id)),
+    );
+  document
+    .querySelectorAll(".delete")
+    .forEach((b) =>
+      b.addEventListener("click", () => removeActivity(b.dataset.id)),
+    );
+  document.querySelectorAll("[data-dropzone]").forEach((z) =>
+    z.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      const target = e.target.closest("[data-id]");
+      if (target) target.classList.add("drop-target");
+    }),
+  );
+  document
+    .querySelectorAll("[data-dropzone]")
+    .forEach((z) =>
+      z.addEventListener("dragleave", (e) =>
+        e.target.closest("[data-id]")?.classList.remove("drop-target"),
+      ),
+    );
+  document
+    .querySelectorAll("[draggable=true]")
+    .forEach((c) =>
+      c.addEventListener("dragstart", (e) =>
+        e.dataTransfer.setData("text/plain", c.dataset.id),
+      ),
+    );
+  document.querySelectorAll("[data-dropzone]").forEach((z) =>
+    z.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const id = e.dataTransfer.getData("text/plain"),
+        target = e.target.closest("[data-id]");
+      document
+        .querySelectorAll(".drop-target")
+        .forEach((x) => x.classList.remove("drop-target"));
+      if (id && target) {
+        const after =
+          e.clientY >
+          target.getBoundingClientRect().top +
+            target.getBoundingClientRect().height / 2;
+        reorder(id, target.dataset.id, after);
+      }
+    }),
+  );
+}
+function validateWeek() {
+  if (state.week < 1 || state.week > weeksInYear(state.weekYear)) {
+    toast(`Week ${state.week} bestaat niet in ${state.weekYear}.`, true);
+    return;
+  }
+  render();
+}
+function showForm(existing) {
+  const wrap = document.createElement("div");
+  wrap.innerHTML = form(existing);
+  const d = wrap.firstElementChild,
+    monthlyFields = d.querySelector(".monthly-fields"),
+    monthlyFieldset = document.createElement("fieldset"),
+    monthlyLegend = document.createElement("legend");
+  monthlyFieldset.className = "monthly-fields";
+  monthlyLegend.textContent = "Maandelijkse herhaling";
+  monthlyFieldset.append(monthlyLegend, ...monthlyFields.childNodes);
+  monthlyFields.replaceWith(monthlyFieldset);
+  d.querySelectorAll(".monthly-fields label").forEach((label) => {
+    label.querySelector(".required-mark")?.remove();
+    const labelText = label.firstChild,
+      heading = document.createElement("span"),
+      mark = document.createElement("span");
+    heading.className = "field-label";
+    mark.className = "required-mark";
+    mark.textContent = "*";
+    heading.append(labelText, mark);
+    label.prepend(heading);
+  });
+  document.body.append(d);
+  d.showModal();
+  const f = $("#activity-form"),
+    type = f.elements.recurrenceType,
+    deadline = f.elements.deadline,
+    daypart = f.elements.daypart,
+    warning = d.querySelector(".deadline-warning"),
+    configuredDay = state.filters.day || "mon",
+    rangeForDaypart = () => timeValue(state.plan, configuredDay, daypart.value),
+    deadlineInRange = () => {
+      if (!deadline.value) return true;
+      const [start, end] = rangeForDaypart().split("–");
+      return (
+        timeToMinutes(deadline.value) <= timeToMinutes(end) &&
+        timeToMinutes(deadline.value) >= timeToMinutes(start)
+      );
+    },
+    updateDeadlineWarning = () => {
+      const outside = !deadlineInRange();
+      warning.hidden = !outside;
+      warning.textContent = outside
+        ? `Let op: ${deadline.value} valt buiten de tijden van het gekozen dagdeel (${rangeForDaypart()}).`
+        : "";
+    },
+    sync = () => {
+      const monthly = type.value === "monthly";
+      d.querySelector(".weekly-fields").hidden = type.value !== "weekly";
+      d.querySelector(".monthly-fields").hidden = !monthly;
+    };
+  type.addEventListener("change", sync);
+  deadline.addEventListener("input", updateDeadlineWarning);
+  daypart.addEventListener("change", updateDeadlineWarning);
+  sync();
+  updateDeadlineWarning();
+  $("#cancel-activity").addEventListener("click", () => d.close());
+  d.addEventListener("close", () => d.remove(), { once: true });
+  f.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const fd = new FormData(f),
+      old = existing,
+      recurrence =
+        type.value === "daily"
+          ? { type: "daily" }
+          : type.value === "weekly"
+            ? { type: "weekly", weekdays: fd.getAll("weekday") }
+            : {
+                type: "monthly",
+                occurrence: fd.get("monthOccurrence"),
+                weekday: fd.get("monthWeekday"),
+              };
+    if (type.value === "weekly" && !recurrence.weekdays.length)
+      return toast("Kies ten minste één weekdag.", true);
+    if (deadline.value && !deadlineInRange())
+      toast(
+        `Let op: deadline ${deadline.value} valt buiten het gekozen dagdeel.`,
+        true,
+      );
+    const a = {
+      id: fd.get("id"),
+      active: fd.has("active"),
+      name: fd.get("name").trim(),
+      description: fd.get("description").trim(),
+      workInstruction: fd.get("workInstruction").trim(),
+      durationMinutes: fd.get("durationMinutes")
+        ? +fd.get("durationMinutes")
+        : null,
+      deadline: fd.get("deadline") || null,
+      daypart: fd.get("daypart"),
+      sortOrder:
+        old && old.daypart === fd.get("daypart")
+          ? old.sortOrder
+          : Math.max(
+              -1,
+              ...state.plan.activities
+                .filter(
+                  (x) => x.daypart === fd.get("daypart") && x.id !== old?.id,
+                )
+                .map((x) => x.sortOrder),
+            ) + 1,
+      recurrence,
+    };
+    const errors = validatePlan({
+      ...state.plan,
+      activities: old
+        ? state.plan.activities.map((x) => (x.id === a.id ? a : x))
+        : [...state.plan.activities, a],
+    });
+    if (errors.length) return toast(errors[0], true);
+    if (old)
+      state.plan.activities = state.plan.activities.map((x) =>
+        x.id === a.id ? a : x,
+      );
+    else state.plan.activities.push(a);
+    renumber(a.daypart);
+    d.close();
+    setStatus("Wijzigingen nog niet opgeslagen", true);
+    render();
+  });
+}
+function renumber(daypart) {
+  orderActivities(
+    state.plan.activities.filter((a) => a.daypart === daypart),
+  ).forEach((a, i) => (a.sortOrder = i));
+}
+function move(id, direction) {
+  const a = state.plan.activities.find((x) => x.id === id),
+    list = orderActivities(
+      state.plan.activities.filter((x) => x.daypart === a.daypart),
+    ),
+    i = list.findIndex((x) => x.id === id),
+    j = i + direction;
+  if (j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  list.forEach((x, n) => (x.sortOrder = n));
+  setStatus("Wijzigingen nog niet opgeslagen", true);
+  render();
+}
+function reorder(id, targetId, after = false) {
+  const a = state.plan.activities.find((x) => x.id === id),
+    t = state.plan.activities.find((x) => x.id === targetId);
+  if (!a || !t || a.daypart !== t.daypart || id === targetId) return;
+  const list = orderActivities(
+    state.plan.activities.filter((x) => x.daypart === a.daypart),
+  ).filter((x) => x.id !== id);
+  let index = list.findIndex((x) => x.id === targetId);
+  if (after) index += 1;
+  list.splice(index, 0, a);
+  list.forEach((x, i) => (x.sortOrder = i));
+  setStatus("Wijzigingen nog niet opgeslagen", true);
+  render();
+}
+async function removeActivity(id) {
+  const a = state.plan.activities.find((x) => x.id === id);
+  if (
+    !(await confirmDialog(
+      `Wil je '${a.name}' echt verwijderen?`,
+      "Activiteit verwijderen",
+    ))
+  )
+    return;
+  state.plan.activities = state.plan.activities.filter((x) => x.id !== id);
+  renumber(a.daypart);
+  setStatus("Wijzigingen nog niet opgeslagen", true);
+  render();
+}
+function copyActivity(id) {
+  const source = state.plan.activities.find((x) => x.id === id),
+    copy = JSON.parse(JSON.stringify(source));
+  copy.id = `activity-${Date.now()}`;
+  copy.name = `${source.name} (kopie)`;
+  copy.sortOrder =
+    Math.max(
+      -1,
+      ...state.plan.activities
+        .filter((a) => a.daypart === source.daypart)
+        .map((a) => a.sortOrder),
+    ) + 1;
+  state.plan.activities.push(copy);
+  setStatus("Wijzigingen nog niet opgeslagen", true);
+  render();
+  toast("Activiteit gekopieerd.");
+}
+async function returnToStart() {
+  if (
+    state.dirty &&
+    !(await confirmDialog(
+      "Je hebt nog niet-opgeslagen wijzigingen. Wil je terug naar de start?",
+      "Terug naar start",
+    ))
+  )
+    return;
+  clearRecovery();
+  state.plan = null;
+  state.dirty = false;
+  state.lastUpdated = null;
+  state.status = "Geen planning geopend";
+  state.page = "home";
+  location.hash = "#home";
+  navigate();
+}
+function loadPlan(plan, status = "Geen wijzigingen", page = "#print") {
+  const errors = validatePlan(plan);
+  if (errors.length) {
+    toast(`Planning niet geladen: ${errors[0]}`, true);
+    return;
+  }
+  state.plan = JSON.parse(JSON.stringify(plan));
+  state.lastUpdated = state.plan.metadata.updatedAt || null;
+  setStatus(
+    status,
+    status === "Nieuwe planning – nog niet opgeslagen" ||
+      status === "Herstelversie hersteld",
+  );
+  location.hash = page;
+  navigate();
+}
+$("#open-plan").onclick = () => $("#file-input").click();
+$("#file-input").onchange = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    loadPlan(JSON.parse(await file.text()));
+  } catch (err) {
+    toast(`Bestand kon niet worden gelezen: ${err.message}`, true);
+  }
+  e.target.value = "";
+};
+$("#new-plan").onclick = async () => {
+  const department = await promptDialog(
+    "Voor welke afdeling is deze planning?",
+    "",
+    "Nieuwe planning",
+    "Bijvoorbeeld: AGF",
+  );
+  if (!department?.trim()) return;
+  const trimmedDepartment = department.trim();
+  loadPlan(
+    blankPlan(`Planning ${trimmedDepartment}`, trimmedDepartment),
+    "Nieuwe planning – nog niet opgeslagen",
+    "#manage",
+  );
+};
+$("#sample-plan").onclick = () => loadPlan(samplePlan(), "Geen wijzigingen");
+$("#save-plan").onclick = async () => {
+  if (!state.plan) return;
+  const now = new Date(),
+    updatedAt = now.toISOString(),
+    exportPlan = {
+      ...state.plan,
+      metadata: { ...state.plan.metadata, updatedAt },
+    },
+    json = JSON.stringify(exportPlan, null, 2),
+    pad = (n) => String(n).padStart(2, "0"),
+    stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`,
+    slug = (value) =>
+      value
+        .toLowerCase()
+        .replace(/[^a-z0-9-]+/g, "-")
+        .replace(/^-|-$/g, ""),
+    titleSlug = slug(state.plan.metadata.title),
+    departmentSlug = slug(state.plan.metadata.department),
+    planSlug = titleSlug.endsWith(`-${departmentSlug}`)
+      ? titleSlug
+      : `${titleSlug}-${departmentSlug}`,
+    name = `${stamp}-${planSlug}.json`;
+  try {
+    if (window.showSaveFilePicker) {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: name,
+        types: [
+          {
+            description: "ActiPlan JSON",
+            accept: { "application/json": [".json"] },
+          },
+        ],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(json);
+      await writable.close();
+      state.plan = exportPlan;
+      state.lastUpdated = updatedAt;
+      clearRecovery();
+      setStatus("Bestand opgeslagen", false);
+      toast("Je planning is opgeslagen.");
+      return;
+    }
+    const blob = new Blob([json], { type: "application/json" }),
+      a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    state.plan = exportPlan;
+    state.lastUpdated = updatedAt;
+    clearRecovery();
+    setStatus("Download gestart", false);
+    toast("Download gestart. Kijk even of het bestand is opgeslagen.");
+  } catch (err) {
+    if (err.name !== "AbortError") {
+      setStatus("Foutmelding", state.dirty);
+      toast(`Opslaan lukt niet: ${err.message}`, true);
+    }
+  }
+};
+const requestOpen = async () => {
+  if (
+    state.dirty &&
+    !(await confirmDialog(
+      "Je hebt nog niet-opgeslagen wijzigingen. Wil je deze planning verlaten?",
+      "Planning openen",
+    ))
+  )
+    return;
+  $("#file-input").click();
+};
+const restoreRecovery = async () => {
+  let raw;
+  try {
+    raw = localStorage.getItem(RECOVERY_KEY);
+  } catch (err) {
+    console.error("Herstelversie lezen lukt niet.", err);
+    return false;
+  }
+  if (!raw) return false;
+  try {
+    const recovery = JSON.parse(raw),
+      savedAt = new Date(recovery.savedAt),
+      when = Number.isNaN(savedAt.getTime())
+        ? "onbekend"
+        : new Intl.DateTimeFormat("nl-NL", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          }).format(savedAt),
+      restore = await confirmDialog(
+        `Er staat een niet-opgeslagen herstelversie van ${when}. Wil je die herstellen?`,
+        "Herstelversie gevonden",
+      );
+    if (!restore) {
+      clearRecovery();
+      return false;
+    }
+    loadPlan(
+      recovery.plan,
+      "Herstelversie hersteld",
+      location.hash || "#manage",
+    );
+    return true;
+  } catch (err) {
+    clearRecovery();
+    console.error("Herstelversie is ongeldig.", err);
+    return false;
+  }
+};
+$("#change-plan").onclick = returnToStart;
+$("#open-plan").onclick = requestOpen;
+window.addEventListener("hashchange", navigate);
+window.addEventListener("beforeunload", (e) => {
+  if (state.dirty) {
+    persistRecovery();
+    e.preventDefault();
+    e.returnValue = "";
+  }
+});
+(async () => {
+  if (!(await restoreRecovery())) navigate();
+})();
