@@ -73,9 +73,15 @@
 .deadline-warning {
   display: block;
   margin-top: 0.35rem;
-  color: #a52a2a;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #eadc9a;
+  border-left: 3px solid #c58a16;
+  border-radius: 5px;
+  background: #fff8df;
+  color: #70520e;
   font-size: 0.75rem;
   font-weight: normal;
+  line-height: 1.35;
 }
 
 .handbook-deadline {
@@ -306,7 +312,15 @@ a:focus-visible {
 }
 
 .capacity-warning {
-  color: #a52a2a;
+  display: block;
+  margin-top: 0.45rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #eadc9a;
+  border-left: 3px solid #c58a16;
+  border-radius: 5px;
+  background: #fff8df;
+  color: #70520e;
+  font-size: 0.8rem;
   font-weight: bold;
 }
 
@@ -335,9 +349,32 @@ a:focus-visible {
 }
 
 .manage-restricted {
-  margin: -0.9rem 0 1rem;
-  color: #8a5700;
-  font-size: 0.78rem;
+  flex: 1 0 100%;
+  min-width: 100%;
+  height: 35px;
+  min-height: 35px;
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border-top: 1px solid var(--line);
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #70520e;
+  font-size: 0.8rem;
+  font-weight: normal;
+  line-height: 1.35;
+}
+.manage-restricted .message-label {
+  color: #70520e;
+  font-weight: bold;
+}
+.manage-restricted .message-label {
+  margin-right: 0.6rem;
+}
+.manage-restricted span:last-child {
+  color: #70520e;
 }
 
 .filter-info {
