@@ -781,7 +781,10 @@ dialog label {
   background: #d78a1c;
 }
 
-.daily-load-track.is-over::-webkit-progress-value,
+.daily-load-track.is-over::-webkit-progress-value {
+  background: var(--red);
+}
+
 .daily-load-track.is-over::-moz-progress-bar {
   background: var(--red);
 }

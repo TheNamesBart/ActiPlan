@@ -277,7 +277,10 @@ a:focus-visible {
   background: #d78a1c;
 }
 
-.capacity-track.is-over::-webkit-progress-value,
+.capacity-track.is-over::-webkit-progress-value {
+  background: #b3261e;
+}
+
 .capacity-track.is-over::-moz-progress-bar {
   background: #b3261e;
 }
