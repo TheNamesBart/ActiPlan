@@ -236,14 +236,26 @@ h1 {
   margin-bottom: 1.5rem;
 }
 .toolbar {
-  background: #fff;
+  align-items: stretch;
+  background: #f8faf8;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 1rem;
+  border-radius: 10px;
+  padding: 0.75rem;
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
   margin-bottom: 1.5rem;
+}
+.week-print-toolbar,
+.has-filter-warning {
+  min-height: 134px;
+}
+@media (min-width: 761px) {
+  .week-print-toolbar,
+  .has-filter-warning {
+    height: 135px;
+    min-height: 135px;
+  }
 }
 .toolbar label,
 .dialog-actions label {
@@ -258,6 +270,37 @@ h1 {
   gap: 0.35rem;
   min-width: 180px;
 }
+.week-summary {
+  flex: 1 0 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  min-width: 100%;
+  height: 35px;
+  min-height: 35px;
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  border-top: 1px solid var(--line);
+  color: #64736c;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+.week-summary,
+.manage-restricted {
+  align-items: baseline;
+}
+.week-summary span {
+  font-size: inherit;
+}
+.week-summary strong {
+  color: var(--green);
+  font-size: inherit;
+  font-weight: normal;
+}
+.week-summary span {
+  color: #64736c;
+  font-size: inherit;
+}
 .view-switcher-label {
   font-size: 0.85rem;
   font-weight: bold;
@@ -265,17 +308,17 @@ h1 {
 .view-switcher-options {
   display: flex;
   width: fit-content;
-  padding: 0.2rem;
-  gap: 0.2rem;
-  border: 1px solid #afbeb6;
-  border-radius: 999px;
-  background: #f1f6f3;
+  padding: 0.15rem;
+  gap: 0.15rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
 }
 .view-switcher-options button {
   min-width: 5rem;
   padding: 0.5rem 1rem;
   border: 0;
-  border-radius: 999px;
+  border-radius: 5px;
   background: transparent;
   color: #294a3b;
   font-weight: bold;
@@ -286,8 +329,8 @@ h1 {
   color: var(--green);
 }
 .view-switcher-options button.selected {
-  background: var(--green);
-  color: #fff;
+  background: #dcefe5;
+  color: var(--green);
 }
 input,
 textarea,
@@ -355,11 +398,40 @@ textarea {
   border-top: 1px dashed #9aa9a0;
 }
 .period,
+.notice,
+.message-warning {
+  border-radius: 6px;
+}
+.period {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 1rem 0 1.5rem;
+  padding: 0.65rem 0.85rem;
+  background: #f8faf8;
+  border: 1px solid var(--line);
+  border-left: 3px solid #8fc4a7;
+  color: #52635a;
+}
+.period strong {
+  color: var(--green);
+  font-size: 0.82rem;
+}
+.period span {
+  font-size: 0.9rem;
+}
 .notice {
   padding: 0.8rem 1rem;
-  background: #fffbe6;
+  background: #f8faf8;
+  border: 1px solid var(--line);
+  color: #52635a;
+}
+.message-warning {
+  padding: 0.65rem 0.85rem;
+  background: #fff8df;
   border: 1px solid #eadc9a;
-  border-radius: 6px;
+  border-left: 3px solid #c58a16;
+  color: #70520e;
 }
 .manage-group {
   margin: 1.5rem 0;
@@ -446,7 +518,9 @@ textarea {
   transform: none;
 }
 .toast.error {
-  background: var(--red);
+  background: #fbe9e9;
+  border: 1px solid #e5b5b5;
+  color: #a52a2a;
 }
 dialog {
   border: 0;
