@@ -211,11 +211,19 @@ function printPage() {
         day = WEEKDAYS[(d.getDay() + 6) % 7][0],
         rest = items.slice(23),
         pages = [
-          { title, day, items: items.slice(0, 23), long: rest.length > 0 },
+          {
+            title,
+            label: title,
+            day,
+            items: items.slice(0, 23),
+            long: rest.length > 0,
+          },
         ];
       if (state.mode === "week" || rest.length)
         pages.push({
-          title: `${title} <small>— vervolg</small>`,
+          title,
+          continuation: true,
+          label: title,
           day,
           items: rest,
           long: false,
@@ -236,7 +244,11 @@ function printPage() {
       const last = index === pageData.length - 1;
       if (page.blank)
         return `<div class="print-page blank-print-page${last ? " last-print-page" : ""}" aria-hidden="true"></div>`;
-      return `<div class="print-page${last ? " last-print-page" : ""}"><h2>${page.title}</h2>${groups(page.items, true, page.day)}${page.long ? '<p class="back-page-note">↳ Deze planning gaat verder op de achterkant van dit blad.</p>' : ""}</div>`;
+      const context =
+        state.mode === "week"
+          ? `Week ${state.week}`
+          : `Dagplanning · ${page.label}`;
+      return `<div class="print-page${last ? " last-print-page" : ""}"><header class="print-page-header"><span>${esc(state.plan.metadata.department)}</span><span>${context}</span></header><h2><span>${page.title}</span>${page.continuation ? '<small>— vervolg</small>' : ""}</h2>${groups(page.items, true, page.day)}${page.long ? '<p class="back-page-note">↳ Deze planning gaat verder op de achterkant van dit blad.</p>' : ""}</div>`;
     })
     .join("");
   if (emptyPlan)

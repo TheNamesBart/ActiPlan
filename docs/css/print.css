@@ -9,6 +9,13 @@
   gap: 0.55rem;
 }
 
+.print-page h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  line-height: 1.15;
+}
+
 .print-page .activity-content .activity-title h4 {
   margin: 0;
   line-height: 1.25;
@@ -84,6 +91,15 @@
     page-break-after: always;
     break-after: page;
     overflow: hidden;
+  }
+
+  .print-page-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 3mm;
+    color: #718078;
+    font-size: 7pt;
   }
 
   .print-page.last-print-page {
@@ -194,9 +210,11 @@
   }
 
   .print-page h2 small {
+    display: inline-block;
     color: #777;
     font-size: 0.72em;
     font-weight: normal;
+    line-height: 1.15;
   }
 
   .handbook-entry {
@@ -238,6 +256,15 @@
     border-radius: 6px;
     padding-left: 0.75rem;
     font-size: 1.45rem;
+  }
+
+  .print-page-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+    color: #64736c;
+    font-size: 0.75rem;
   }
 
   .print-page .activity-card {
