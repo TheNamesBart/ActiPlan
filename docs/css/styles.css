@@ -105,14 +105,28 @@ button:disabled {
   display: grid;
   place-items: center;
   padding: 2rem;
+  background: var(--light);
 }
 .welcome-card {
   background: white;
-  border: 1px solid var(--line);
+  border: 1px solid #b9d9c7;
+  border-top: 4px solid var(--green);
   border-radius: 12px;
   max-width: 680px;
   padding: 3rem;
   box-shadow: 0 8px 30px #17342a0d;
+}
+.welcome-card h1 {
+  color: #17342a;
+}
+.welcome-brand {
+  color: var(--green);
+}
+.welcome-brand span {
+  color: #17342a;
+}
+.welcome-card > p:not(.eyebrow) {
+  color: #52635a;
 }
 .welcome-actions {
   display: grid;
@@ -886,14 +900,14 @@ dialog label {
   gap: 0.2rem;
   padding-top: 0.15rem;
   border-top: 1px solid var(--line);
-  color: #829087;
+  color: #64736c;
   font-size: 0.85rem;
 }
 .text-link {
   display: block;
   border: 0;
   background: transparent;
-  color: #718078;
+  color: var(--green);
   padding: 0.15rem 0.35rem;
   text-decoration: underline;
   text-underline-offset: 0.18em;

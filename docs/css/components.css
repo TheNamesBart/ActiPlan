@@ -453,71 +453,120 @@ dialog form > .weekly-fields select {
 }
 
 .opening-times-dialog {
-  width: min(70rem, calc(100vw - 2rem));
-  max-width: 70rem;
+  width: fit-content;
+  max-width: calc(100vw - 2rem);
   max-height: calc(100vh - 2rem);
   overflow: auto;
 }
 
 .opening-times-dialog form {
+  width: fit-content;
+  min-width: min(28rem, calc(100vw - 5rem));
   display: grid;
   gap: 1rem;
 }
 
-.opening-times-table-wrap {
-  overflow-x: auto;
+.opening-times-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.75rem;
   border: 1px solid var(--line);
-}
-
-.opening-times-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.78rem;
-}
-
-.opening-times-table th,
-.opening-times-table td {
-  padding: 0.55rem;
-  border-bottom: 1px solid var(--line);
-  border-right: 1px solid var(--line);
-  text-align: left;
-  vertical-align: middle;
-}
-
-.opening-times-table thead th {
-  background: #f1f6f2;
-  color: #126b45;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.opening-times-table tbody th {
-  width: 6rem;
+  border-radius: 6px;
   background: #f8faf8;
-  color: #52635a;
-  white-space: nowrap;
+  font-weight: bold;
 }
 
-.opening-times-table tr:last-child th,
-.opening-times-table tr:last-child td {
-  border-bottom: 0;
+.opening-times-section {
+  display: grid;
+  gap: 0.75rem;
 }
 
-.opening-times-table th:last-child,
-.opening-times-table td:last-child {
-  border-right: 0;
+.opening-times-section h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.opening-times-simple {
+  display: grid;
+  grid-template-columns: 1fr;
+  width: fit-content;
+  gap: 0.75rem;
+}
+
+.opening-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.opening-days label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #f8faf8;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.opening-times-custom {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.opening-times-custom fieldset {
+  display: grid;
+  grid-template-columns: 1fr;
+  width: fit-content;
+  min-width: 0;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.opening-times-custom legend {
+  padding: 0 0.35rem;
+  color: var(--green);
+  font-weight: bold;
+}
+
+.opening-time-field {
+  display: grid;
+  grid-template-columns: 7rem auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: bold;
 }
 
 .opening-time-range {
   display: grid;
-  grid-template-columns: minmax(4.8rem, 1fr) auto minmax(4.8rem, 1fr);
+  grid-template-columns: 7rem auto 7rem;
+  width: fit-content;
   align-items: center;
   gap: 0.35rem;
 }
 
 .opening-time-range input {
   width: 100%;
-  min-width: 0;
+  min-width: 7rem;
   padding: 0.45rem 0.35rem;
   font-size: 0.78rem;
+}
+
+@media (max-width: 760px) {
+  .opening-times-simple,
+  .opening-times-custom fieldset {
+    grid-template-columns: 1fr;
+  }
+
+  .opening-time-field {
+    grid-template-columns: 6rem auto;
+  }
 }

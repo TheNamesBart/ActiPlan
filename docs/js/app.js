@@ -404,22 +404,55 @@ function handbook(print) {
 function editOpeningTimes() {
   const dialog = document.createElement("dialog");
   dialog.className = "opening-times-dialog";
-  dialog.innerHTML = `<form><h2>Dagdelen aanpassen</h2><p>Stel per dag de tijden van elk dagdeel in. Deze tijden worden gebruikt voor de planning en de tijdsbelasting.</p><div class="opening-times-table-wrap"><table class="opening-times-table"><thead><tr><th scope="col">Dag</th>${DAYPARTS.map(([, part]) => `<th scope="col">${part}</th>`).join("")}</tr></thead><tbody>${WEEKDAYS.map(
-    ([day, label]) =>
-      `<tr><th scope="row">${label}</th>${DAYPARTS.map(([key]) => {
-        const [start, end] = timeValue(state.plan, day, key).split("–");
-        return `<td><div class="opening-time-range"><input aria-label="${label} ${key} begintijd" required type="time" data-day="${day}" data-part="${key}" data-edge="start" value="${start}"><span>tot</span><input aria-label="${label} ${key} eindtijd" required type="time" data-day="${day}" data-part="${key}" data-edge="end" value="${end}"></div></td>`;
-      }).join("")}</tr>`,
-  ).join(
-    "",
-  )}</tbody></table></div><div class="dialog-actions"><button type="button" class="button" id="cancel-opening-times">Annuleren</button><button class="button primary">Opslaan</button></div></form>`;
+  const allTimes = daypartTimeMap(state.plan),
+    customDays = WEEKDAYS.filter(([day]) =>
+      DAYPARTS.some(([key]) => allTimes[day][key] !== allTimes.mon[key]),
+    ).map(([day]) => day),
+    rangeFields = (day, label) =>
+      DAYPARTS.map(([key, part]) => {
+        const [start, end] = allTimes[day][key].split("–");
+        return `<label class="opening-time-field"><span>${part}</span><div class="opening-time-range"><input aria-label="${label} ${part} begintijd" required type="time" data-day="${day}" data-part="${key}" data-edge="start" value="${start}"><span>tot</span><input aria-label="${label} ${part} eindtijd" required type="time" data-day="${day}" data-part="${key}" data-edge="end" value="${end}"></div></label>`;
+      }).join("");
+  dialog.innerHTML = `<form><h2>Dagdelen aanpassen</h2><p>Stel eerst de standaardtijden in. Voeg daarna alleen afwijkende tijden toe voor specifieke dagen.</p><section class="opening-times-section"><h3>Standaardtijden</h3><div class="opening-times-simple">${rangeFields("mon", "Standaardtijden")}</div></section><section class="opening-times-section"><h3>Afwijkende dagen</h3><p class="form-help">Selecteer één of meer dagen met afwijkende tijden.</p><div class="opening-days">${WEEKDAYS.map(([day, label]) => `<label><input type="checkbox" value="${day}" ${customDays.includes(day) ? "checked" : ""}>${label}</label>`).join("")}</div><div class="opening-times-custom"></div></section><div class="dialog-actions"><button type="button" class="button" id="cancel-opening-times">Annuleren</button><button class="button primary">Opslaan</button></div></form>`;
   document.body.append(dialog);
   dialog.showModal();
+  const custom = dialog.querySelector(".opening-times-custom"),
+    selectedDays = () =>
+      [...dialog.querySelectorAll(".opening-days input:checked")].map(
+        (input) => input.value,
+      ),
+    renderCustomDays = () => {
+      custom.innerHTML = selectedDays()
+        .map(
+          (day) =>
+            `<fieldset><legend>${WEEKDAYS.find(([key]) => key === day)[1]}</legend>${rangeFields(day, WEEKDAYS.find(([key]) => key === day)[1])}</fieldset>`,
+        )
+        .join("");
+      custom.hidden = !selectedDays().length;
+    };
+  dialog
+    .querySelectorAll(".opening-days input")
+    .forEach((input) => input.addEventListener("change", renderCustomDays));
+  renderCustomDays();
   dialog.querySelector("#cancel-opening-times").onclick = () => dialog.close();
   dialog.querySelector("form").onsubmit = (e) => {
     e.preventDefault();
-    const values = daypartTimeMap(state.plan);
-    for (const field of dialog.querySelectorAll("input[data-day]")) {
+    const values = daypartTimeMap(state.plan),
+      standardFields = dialog.querySelectorAll(
+        ".opening-times-simple input[data-day]",
+      );
+    for (const field of standardFields) {
+      const part = field.dataset.part;
+      for (const [day] of WEEKDAYS)
+        values[day][part] =
+          field.dataset.edge === "start"
+            ? `${field.value}–${values[day][part].split("–")[1]}`
+            : `${values[day][part].split("–")[0]}–${field.value}`;
+    }
+    const fields = dialog.querySelectorAll(
+      ".opening-times-custom input[data-day]",
+    );
+    for (const field of fields) {
       const day = field.dataset.day,
         part = field.dataset.part;
       values[day][part] =
