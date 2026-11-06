@@ -120,12 +120,18 @@ function navigate() {
   });
   render();
 }
-function groups(items, print = false, day) {
+function groups(items, print = false, day, continuation = false) {
   let out = "";
+  let firstGroup = true;
   for (const [key, label] of DAYPARTS) {
     const list = items.filter((a) => a.daypart === key);
     if (!list.length) continue;
-    out += `<section class="daypart"><h4>${label} <small>(${timeValue(state.plan, day, key)})</small></h4>${list.map((a) => activityCard(a, print)).join("")}</section>`;
+    const heading =
+      continuation && firstGroup
+        ? ""
+        : `<h4>${label} <small>(${timeValue(state.plan, day, key)})</small></h4>`;
+    out += `<section class="daypart${heading ? "" : " continuation-daypart"}">${heading}${list.map((a) => activityCard(a, print)).join("")}</section>`;
+    firstGroup = false;
   }
   return out || `<p class="empty">Geen activiteiten gepland.</p>`;
 }
@@ -248,7 +254,7 @@ function printPage() {
         state.mode === "week"
           ? `Week ${state.week}`
           : `Dagplanning · ${page.label}`;
-      return `<div class="print-page${last ? " last-print-page" : ""}"><header class="print-page-header"><span>${esc(state.plan.metadata.department)}</span><span>${context}</span></header><h2><span>${page.title}</span>${page.continuation ? '<small>— vervolg</small>' : ""}</h2>${groups(page.items, true, page.day)}${page.long ? '<p class="back-page-note">↳ Deze planning gaat verder op de achterkant van dit blad.</p>' : ""}</div>`;
+      return `<div class="print-page${last ? " last-print-page" : ""}"><header class="print-page-header"><span>${esc(state.plan.metadata.department)}</span><span>${context}</span></header><h2><span>${page.title}</span>${page.continuation ? '<small>— vervolg</small>' : ""}</h2>${groups(page.items, true, page.day, page.continuation)}${page.long ? '<p class="back-page-note">↳ Deze planning gaat verder op de achterkant van dit blad.</p>' : ""}</div>`;
     })
     .join("");
   if (emptyPlan)

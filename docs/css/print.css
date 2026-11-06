@@ -151,6 +151,11 @@
     background: transparent;
   }
 
+  .daypart.continuation-daypart {
+    padding-top: 0.12rem;
+    border-top: 0;
+  }
+
   .daypart h4 {
     font-size: 9.5pt;
     margin: 0.08rem 0;
