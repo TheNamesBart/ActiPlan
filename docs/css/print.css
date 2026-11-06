@@ -16,6 +16,34 @@
   line-height: 1.15;
 }
 
+.print-extra-work {
+  margin: 1.25rem 0;
+  padding: 0.8rem 0.65rem 0.55rem;
+  border: 1px solid #9aaca3;
+  border-radius: 6px;
+  color: #17342a;
+}
+
+.print-extra-work strong {
+  display: block;
+  padding-left: 0.65rem;
+  color: #126b45;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.print-extra-work-lines {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.55rem;
+}
+
+.print-extra-work-lines span {
+  display: block;
+  height: 1rem;
+  border-bottom: 1px solid #aeb9b4;
+}
+
 .print-page .activity-content .activity-title h4 {
   margin: 0;
   line-height: 1.25;
@@ -220,6 +248,33 @@
     font-size: 0.72em;
     font-weight: normal;
     line-height: 1.15;
+  }
+
+  .print-page h2 {
+    margin: 0 0 3mm;
+  }
+
+  .print-extra-work {
+    margin: 0 0 3mm;
+    padding: 1.5mm 2mm;
+    border: 1px solid #8e9d96;
+    border-radius: 1mm;
+  }
+
+  .print-extra-work strong {
+    padding-left: 0;
+    color: #17342a;
+    font-size: 11pt;
+  }
+
+  .print-extra-work-lines {
+    gap: 1.5mm;
+    margin-top: 1mm;
+  }
+
+  .print-extra-work-lines span {
+    height: 4mm;
+    border-bottom: 0.25mm solid #aeb9b4;
   }
 
   .handbook-entry {
