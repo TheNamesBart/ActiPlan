@@ -120,12 +120,18 @@ function navigate() {
   });
   render();
 }
-function groups(items, print = false, day) {
+function groups(items, print = false, day, continuation = false) {
   let out = "";
+  let firstGroup = true;
   for (const [key, label] of DAYPARTS) {
     const list = items.filter((a) => a.daypart === key);
     if (!list.length) continue;
-    out += `<section class="daypart"><h4>${label} <small>(${timeValue(state.plan, day, key)})</small></h4>${list.map((a) => activityCard(a, print)).join("")}</section>`;
+    const heading =
+      continuation && firstGroup
+        ? ""
+        : `<h4>${label} <small>(${timeValue(state.plan, day, key)})</small></h4>`;
+    out += `<section class="daypart${heading ? "" : " continuation-daypart"}">${heading}${list.map((a) => activityCard(a, print)).join("")}</section>`;
+    firstGroup = false;
   }
   return out || `<p class="empty">Geen activiteiten gepland.</p>`;
 }
@@ -193,6 +199,7 @@ function home() {
     )}</div></section><a class="button primary large" href="#print">Planning bekijken en printen</a></section>`;
 }
 function printPage() {
+  const printPageActivityLimit = 21;
   const date = parseDate(state.date),
     week =
       state.mode === "week"
@@ -209,13 +216,13 @@ function printPage() {
           year: "numeric",
         }).format(d),
         day = WEEKDAYS[(d.getDay() + 6) % 7][0],
-        rest = items.slice(23),
+        rest = items.slice(printPageActivityLimit),
         pages = [
           {
             title,
             label: title,
             day,
-            items: items.slice(0, 23),
+            items: items.slice(0, printPageActivityLimit),
             long: rest.length > 0,
           },
         ];
@@ -248,7 +255,10 @@ function printPage() {
         state.mode === "week"
           ? `Week ${state.week}`
           : `Dagplanning · ${page.label}`;
-      return `<div class="print-page${last ? " last-print-page" : ""}"><header class="print-page-header"><span>${esc(state.plan.metadata.department)}</span><span>${context}</span></header><h2><span>${page.title}</span>${page.continuation ? '<small>— vervolg</small>' : ""}</h2>${groups(page.items, true, page.day)}${page.long ? '<p class="back-page-note">↳ Deze planning gaat verder op de achterkant van dit blad.</p>' : ""}</div>`;
+      const extraWorkField = page.continuation
+        ? ""
+        : `<section class="print-extra-work" aria-label="Extra activiteiten"><strong>Extra activiteiten</strong><div class="print-extra-work-lines"><span></span><span></span><span></span></div></section>`;
+      return `<div class="print-page${last ? " last-print-page" : ""}"><header class="print-page-header"><span>${esc(state.plan.metadata.department)}</span><span>${context}</span></header><h2><span>${page.title}</span>${page.continuation ? '<small>— vervolg</small>' : ""}</h2>${extraWorkField}${groups(page.items, true, page.day, page.continuation)}${page.long ? '<p class="back-page-note">↳ Deze planning gaat verder op de achterkant van dit blad.</p>' : ""}</div>`;
     })
     .join("");
   if (emptyPlan)
