@@ -388,7 +388,7 @@ function manageCard(a, restricted) {
   const instruction = a.workInstruction?.trim(),
     monthlyMeta =
       a.recurrence.type === "monthly"
-        ? `<span class="manage-monthly-recurrence">Maandelijks · ${esc(MONTHLY_OCCURRENCES.find(([key]) => key === String(a.recurrence.occurrence))?.[1] || "onbekend")} ${esc(WEEKDAYS.find(([key]) => key === a.recurrence.weekday)?.[1].toLowerCase() || "onbekende dag")}</span>`
+        ? `<span class="manage-monthly-recurrence">Maandelijks · elke ${esc(MONTHLY_OCCURRENCES.find(([key]) => key === String(a.recurrence.occurrence))?.[1] || "onbekend")} ${esc(WEEKDAYS.find(([key]) => key === a.recurrence.weekday)?.[1].toLowerCase() || "onbekende dag")}</span>`
         : "",
     days =
       a.recurrence.type === "daily"
