@@ -160,6 +160,25 @@ export function reorderActivities(
 export function activitiesForDate(activities, date) {
   return orderActivities(activities.filter((a) => occursOn(a, date)));
 }
+export function summarizeDay(activities, daypartTimes, date) {
+  const day = WEEKDAYS[dayIndex(date)][0],
+    scheduled = activitiesForDate(activities, date);
+  return DAYPARTS.map(([key, label]) => {
+    const [start, end] = daypartTimes[day][key].split("–"),
+      items = scheduled.filter((activity) => activity.daypart === key);
+    return {
+      key,
+      label,
+      count: items.length,
+      duration: items.reduce((sum, activity) => sum + activity.durationMinutes, 0),
+      capacity: timeToMinutes(end) - timeToMinutes(start),
+    };
+  });
+}
+function timeToMinutes(value) {
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
+}
 export function validatePlan(plan) {
   const errors = [];
   if (!plan || typeof plan !== "object")

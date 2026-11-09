@@ -8,6 +8,7 @@ import {
   orderActivities,
   reorderActivities,
   activitiesForDate,
+  summarizeDay,
   dateKey,
   parseDate,
   formatDate,
@@ -16,7 +17,7 @@ import {
   weeksInYear,
   dateFromIsoWeek,
   recurrenceLabel,
-} from "./core.js?v=5";
+} from "./core.js?v=6";
 import { $, esc } from "./ui.js";
 import { confirmDialog, promptDialog } from "./dialogs.js?v=4";
 const today = dateKey(new Date());
@@ -192,19 +193,18 @@ function home() {
         ? "Opgeslagen"
         : "Nog niet opgeslagen",
     dailySummaries = Array.from({ length: 7 }, (_, index) => {
-      const day = WEEKDAYS[index][0],
-        activities = activitiesForDate(
+      const dayparts = summarizeDay(
           activeActivities,
+          state.plan.metadata.daypartTimes,
           dateFromIsoWeek(state.weekYear, state.week, index),
         ),
-        dailyCapacity = DAYPARTS.reduce((sum, [key]) => {
-          const [start, end] = timeValue(state.plan, day, key).split("–");
-          return sum + timeToMinutes(end) - timeToMinutes(start);
-        }, 0);
+        activities = dayparts.reduce((sum, part) => sum + part.count, 0),
+        dailyCapacity = dayparts.reduce((sum, part) => sum + part.capacity, 0);
       return {
-        count: activities.length,
-        duration: activities.reduce((sum, a) => sum + a.durationMinutes, 0),
+        count: activities,
+        duration: dayparts.reduce((sum, part) => sum + part.duration, 0),
         capacity: dailyCapacity,
+        dayparts,
       };
     });
   return `<section class="hero"><div class="page-heading"><div><p class="eyebrow">Overzicht</p><h1>${esc(state.plan.metadata.title)}</h1></div><button type="button" class="button" id="edit-opening-times">Dagdelen aanpassen</button></div><p class="lead">Hier vind je een overzicht van je planning en activiteiten.</p><div class="home-meta"><div class="home-meta-primary"><span>Afdeling</span><strong>${esc(state.plan.metadata.department)}</strong></div><div class="home-meta-primary"><span>Actieve activiteiten</span><strong>${activeCount} van ${state.plan.activities.length}</strong></div><div><span>Bestandsstatus</span><strong class="${state.dirty ? "is-unsaved" : "is-saved"}">${fileStatus}</strong></div><div><span>Laatst gewijzigd</span><strong>${esc(lastUpdated)}</strong></div></div><section class="daily-overview" aria-labelledby="daily-overview-title"><div class="daily-overview-heading"><h2 id="daily-overview-title">Activiteiten per dag</h2><span>Deze week</span></div><div class="daily-counts">${dailySummaries
@@ -218,7 +218,16 @@ function home() {
             : percentage > CAPACITY_WARNING_PERCENTAGE
               ? "is-warning"
               : "is-ok";
-      return `<div class="daily-summary"><span>${WEEKDAYS[index][1].slice(0, 2)}</span><strong>${summary.count}</strong><small>${formatMinutes(summary.duration)}</small><progress class="daily-load-track ${status}" aria-label="Geschatte taakduur ${WEEKDAYS[index][1]}" value="${summary.duration}" max="${summary.capacity}"></progress></div>`;
+      return `<details class="daily-summary"><summary><span>${WEEKDAYS[index][1]}</span><strong>${summary.count}</strong><small>${formatMinutes(summary.duration)}</small><progress class="daily-load-track ${status}" aria-label="Geschatte taakduur ${WEEKDAYS[index][1]}" value="${summary.duration}" max="${summary.capacity}"></progress></summary><div class="daily-dayparts" aria-label="Belasting per dagdeel">${summary.dayparts.map((part) => {
+        const partPercentage = Math.round((part.duration / part.capacity) * 100),
+          partStatus =
+            partPercentage > CAPACITY_OVERLOAD_PERCENTAGE
+              ? "is-over"
+              : partPercentage > CAPACITY_WARNING_PERCENTAGE
+                ? "is-warning"
+                : "is-ok";
+        return `<div class="daily-daypart"><span>${part.label}</span><small>${part.count} · ${formatMinutes(part.duration)}</small><progress class="daily-daypart-track ${partStatus}" aria-label="${part.label}: ${formatMinutes(part.duration)}" value="${part.duration}" max="${part.capacity}"></progress></div>`;
+      }).join("")}</div></details>`;
     })
     .join(
       "",

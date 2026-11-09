@@ -13,6 +13,7 @@ import {
   validDeadline,
   createDaypartTimes,
   deadlineWithinDaypart,
+  summarizeDay,
 } from "../docs/js/core.js";
 const plan = samplePlan();
 const checks = [
@@ -132,6 +133,39 @@ const checks = [
       },
       new Date(2026, 10, 11),
     ),
+  ],
+  [
+    "dagbelasting wordt per dagdeel uitgesplitst",
+    (() => {
+      const day = new Date(2026, 10, 9),
+        parts = summarizeDay(
+          [
+            ...plan.activities,
+            {
+              ...plan.activities[0],
+              id: "inactive-long-task",
+              active: false,
+              durationMinutes: 999,
+            },
+          ],
+          plan.metadata.daypartTimes,
+          day,
+        );
+      return (
+        parts.length === 5 &&
+        parts.map((part) => [part.count, part.duration]).join("|") ===
+          "5,120|6,155|8,205|5,140|7,135" &&
+        parts.find((part) => part.key === "morning").capacity === 240 &&
+        summarizeDay(
+          plan.activities,
+          { ...plan.metadata.daypartTimes, mon: {
+            ...plan.metadata.daypartTimes.mon,
+            morning: "09:00–11:00",
+          } },
+          day,
+        ).find((part) => part.key === "morning").capacity === 120
+      );
+    })(),
   ],
   [
     "laatste woensdag wordt herkend",
