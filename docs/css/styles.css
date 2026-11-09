@@ -917,6 +917,35 @@ dialog label {
   color: var(--green);
   border: 0;
 }
+.github-badge {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid #b9d9c7;
+  border-radius: 999px;
+  background: #f3faf6;
+  color: var(--green);
+  text-decoration: none;
+  box-shadow: 0 3px 10px #17342a18;
+}
+.github-badge img {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: currentColor;
+}
+.github-badge:hover,
+.github-badge:focus-visible {
+  border-color: var(--green);
+  background: var(--light);
+  color: var(--green);
+}
 #clear-filters:hover {
   background: #d5ecdf;
   border-color: var(--green);
