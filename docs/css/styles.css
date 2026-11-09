@@ -287,7 +287,7 @@ h1 {
 .week-summary {
   flex: 1 0 100%;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.6rem;
   min-width: 100%;
   height: 35px;
@@ -452,6 +452,9 @@ textarea {
 }
 .manage-group h2 {
   font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 .manage-card {
   display: flex;
@@ -462,6 +465,64 @@ textarea {
   padding: 0.75rem;
   border-radius: 6px;
   margin: 0.4rem 0;
+}
+.manage-columns,
+.manage-card {
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) repeat(7, 1.7rem) 7.5rem;
+  column-gap: 0.35rem;
+  align-items: center;
+}
+.manage-card {
+  position: relative;
+}
+.manage-columns {
+  row-gap: 0;
+  padding: 0 0.75rem;
+  color: #718078;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+.manage-columns span:nth-child(2) {
+  text-align: left;
+}
+.manage-columns span:first-child,
+.manage-columns span:last-child {
+  visibility: hidden;
+}
+.manage-days {
+  position: relative;
+  display: grid;
+  grid-column: 3 / span 7;
+  grid-template-columns: repeat(7, 1.7rem);
+  gap: 0.35rem;
+  align-self: stretch;
+  align-items: center;
+}
+.manage-days span {
+  color: #c1cbc5;
+  font-size: 0.9rem;
+  text-align: center;
+}
+.manage-days span.is-scheduled {
+  color: var(--green);
+  font-weight: 800;
+}
+.manage-days .manage-monthly-recurrence {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.15rem;
+  color: #718078;
+  font-size: 0.76rem;
+  font-weight: normal;
+  line-height: 1;
+  text-align: center;
+}
+.manage-card .manage-actions {
+  justify-self: end;
 }
 .drag-handle {
   cursor: grab;
@@ -845,36 +906,168 @@ dialog label {
   border-radius: 999px;
   appearance: none;
 }
+.daily-dayparts {
+  display: grid;
+  width: 100%;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid #e6eee9;
+}
+.daily-daypart {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.15rem 0.25rem;
+  text-align: left;
+}
+.daily-daypart > span {
+  overflow: hidden;
+  color: #64736c;
+  font-size: 0.6rem;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+.daily-daypart small {
+  min-height: 0;
+  color: #718078;
+  font-size: 0.58rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+.daily-daypart-track {
+  grid-column: 1 / -1;
+  display: block;
+  width: 100%;
+  height: 0.22rem;
+  overflow: hidden;
+  background: #e6eee9;
+  appearance: none;
+}
 
-.daily-load-track::-webkit-progress-bar {
+.daily-load-track::-webkit-progress-bar,
+.daily-daypart-track::-webkit-progress-bar {
   background: #e6eee9;
   border-radius: inherit;
 }
 
-.daily-load-track::-webkit-progress-value {
+.daily-load-track::-webkit-progress-value,
+.daily-daypart-track::-webkit-progress-value {
   background: #29915d;
   border-radius: inherit;
 }
 
-.daily-load-track::-moz-progress-bar {
+.daily-load-track::-moz-progress-bar,
+.daily-daypart-track::-moz-progress-bar {
   background: #29915d;
   border-radius: inherit;
 }
 
-.daily-load-track.is-warning::-webkit-progress-value {
+.daily-load-track.is-warning::-webkit-progress-value,
+.daily-daypart-track.is-warning::-webkit-progress-value {
   background: #d78a1c;
 }
 
-.daily-load-track.is-warning::-moz-progress-bar {
+.daily-load-track.is-warning::-moz-progress-bar,
+.daily-daypart-track.is-warning::-moz-progress-bar {
   background: #d78a1c;
 }
 
-.daily-load-track.is-over::-webkit-progress-value {
+.daily-load-track.is-over::-webkit-progress-value,
+.daily-daypart-track.is-over::-webkit-progress-value {
   background: var(--red);
 }
 
-.daily-load-track.is-over::-moz-progress-bar {
+.daily-load-track.is-over::-moz-progress-bar,
+.daily-daypart-track.is-over::-moz-progress-bar {
   background: var(--red);
+}
+.daily-counts {
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+.daily-counts > .daily-summary {
+  padding: 0.85rem 1rem;
+  border: 1px solid #c5d0ca;
+  border-left: 0.45rem solid #668a74;
+  box-shadow: 0 2px 4px #17342a12;
+}
+.daily-counts > .daily-summary > summary {
+  display: grid;
+  grid-template-columns: 7rem 5rem 11rem minmax(12rem, 1fr);
+  align-items: center;
+  justify-items: start;
+  gap: 0.2rem 0.75rem;
+  cursor: pointer;
+  list-style: none;
+}
+.daily-counts > .daily-summary > summary::-webkit-details-marker {
+  display: none;
+}
+.daily-counts > .daily-summary > summary::after {
+  content: "Dagdelen tonen";
+  grid-column: 1 / -1;
+  color: #64736c;
+  font-size: 0.68rem;
+}
+.daily-counts > .daily-summary[open] > summary::after {
+  content: "Dagdelen verbergen";
+}
+.daily-counts > .daily-summary:nth-child(even) {
+  background: #eef2f0;
+  border-left-color: #476d57;
+}
+.daily-counts > .daily-summary > summary > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 6rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 5px;
+  background: #dcebe2;
+  color: #2f5e43;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: none;
+}
+.daily-counts > .daily-summary > summary > strong {
+  font-size: 1rem;
+}
+.daily-counts > .daily-summary > summary > small {
+  min-height: 0;
+  text-align: left;
+}
+.daily-counts > .daily-summary > summary > .daily-load-track {
+  width: 100%;
+  margin-top: 0;
+}
+.daily-dayparts {
+  grid-column: 1 / -1;
+  grid-template-columns: 1fr;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+  padding-top: 0.7rem;
+  border-top-color: #dce7e0;
+}
+.daily-daypart {
+  grid-template-columns: 8rem 11rem minmax(8rem, 1fr);
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  border-radius: 5px;
+  background: #ffffffb8;
+}
+.daily-daypart > span {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.daily-daypart small {
+  font-size: 0.64rem;
+  text-align: left;
+}
+.daily-daypart-track {
+  grid-column: 3;
+  grid-row: 1;
 }
 @media (max-width: 760px) {
   .daily-counts {
@@ -883,6 +1076,30 @@ dialog label {
   .daily-counts div {
     padding-left: 0;
     padding-right: 0;
+  }
+  .daily-counts > .daily-summary {
+    grid-template-columns: 5rem 4rem 1fr;
+    gap: 0.2rem 0.5rem;
+    padding: 0.65rem;
+  }
+  .daily-counts > .daily-summary > summary {
+    grid-template-columns: 5rem 4rem 1fr;
+  }
+  .daily-counts > .daily-summary > summary > .daily-load-track {
+    grid-column: 1 / -1;
+  }
+  .daily-counts > .daily-summary > summary > span {
+    min-width: 4.5rem;
+  }
+  .daily-dayparts {
+    grid-template-columns: 1fr;
+  }
+  .daily-daypart {
+    grid-template-columns: 6rem 1fr;
+  }
+  .daily-daypart-track {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 }
 .welcome-primary-actions {
@@ -983,6 +1200,11 @@ dialog label {
   letter-spacing: 0.01em;
   margin-left: 0.25rem;
 }
+.manage-group h2 .manage-time-exception {
+  color: #70520e;
+  font-size: 0.62rem;
+  font-weight: 600;
+}
 .daypart h4 small {
   font-size: 0.68rem;
   font-weight: normal;
@@ -995,7 +1217,7 @@ dialog label {
   margin-left: 0.35rem;
 }
 .manage-card {
-  gap: 0.8rem;
+  column-gap: 0.35rem;
   padding: 0.65rem 0.75rem;
   border-color: #e0e8e3;
   box-shadow: 0 1px 2px #17342a08;

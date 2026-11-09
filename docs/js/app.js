@@ -6,7 +6,9 @@ import {
   samplePlan,
   validatePlan,
   orderActivities,
+  reorderActivities,
   activitiesForDate,
+  summarizeDay,
   dateKey,
   parseDate,
   formatDate,
@@ -15,7 +17,7 @@ import {
   weeksInYear,
   dateFromIsoWeek,
   recurrenceLabel,
-} from "./core.js?v=3";
+} from "./core.js?v=6";
 import { $, esc } from "./ui.js";
 import { confirmDialog, promptDialog } from "./dialogs.js?v=4";
 const today = dateKey(new Date());
@@ -60,6 +62,12 @@ const daypartTimeMap = (plan) =>
       ),
     ]),
   );
+const afwijkendeDagenVoorDagdeel = (plan, key) =>
+  WEEKDAYS.filter(
+    ([day]) =>
+      day !== DEFAULT_DEADLINE_DAY &&
+      timeValue(plan, day, key) !== timeValue(plan, DEFAULT_DEADLINE_DAY, key),
+  ).map(([, label]) => label.toLowerCase());
 const timeToMinutes = (value) => {
   const [hours, minutes] = value.split(":").map(Number);
   return hours * 60 + minutes;
@@ -185,19 +193,18 @@ function home() {
         ? "Opgeslagen"
         : "Nog niet opgeslagen",
     dailySummaries = Array.from({ length: 7 }, (_, index) => {
-      const day = WEEKDAYS[index][0],
-        activities = activitiesForDate(
+      const dayparts = summarizeDay(
           activeActivities,
+          state.plan.metadata.daypartTimes,
           dateFromIsoWeek(state.weekYear, state.week, index),
         ),
-        dailyCapacity = DAYPARTS.reduce((sum, [key]) => {
-          const [start, end] = timeValue(state.plan, day, key).split("–");
-          return sum + timeToMinutes(end) - timeToMinutes(start);
-        }, 0);
+        activities = dayparts.reduce((sum, part) => sum + part.count, 0),
+        dailyCapacity = dayparts.reduce((sum, part) => sum + part.capacity, 0);
       return {
-        count: activities.length,
-        duration: activities.reduce((sum, a) => sum + a.durationMinutes, 0),
+        count: activities,
+        duration: dayparts.reduce((sum, part) => sum + part.duration, 0),
         capacity: dailyCapacity,
+        dayparts,
       };
     });
   return `<section class="hero"><div class="page-heading"><div><p class="eyebrow">Overzicht</p><h1>${esc(state.plan.metadata.title)}</h1></div><button type="button" class="button" id="edit-opening-times">Dagdelen aanpassen</button></div><p class="lead">Hier vind je een overzicht van je planning en activiteiten.</p><div class="home-meta"><div class="home-meta-primary"><span>Afdeling</span><strong>${esc(state.plan.metadata.department)}</strong></div><div class="home-meta-primary"><span>Actieve activiteiten</span><strong>${activeCount} van ${state.plan.activities.length}</strong></div><div><span>Bestandsstatus</span><strong class="${state.dirty ? "is-unsaved" : "is-saved"}">${fileStatus}</strong></div><div><span>Laatst gewijzigd</span><strong>${esc(lastUpdated)}</strong></div></div><section class="daily-overview" aria-labelledby="daily-overview-title"><div class="daily-overview-heading"><h2 id="daily-overview-title">Activiteiten per dag</h2><span>Deze week</span></div><div class="daily-counts">${dailySummaries
@@ -211,7 +218,16 @@ function home() {
             : percentage > CAPACITY_WARNING_PERCENTAGE
               ? "is-warning"
               : "is-ok";
-      return `<div class="daily-summary"><span>${WEEKDAYS[index][1].slice(0, 2)}</span><strong>${summary.count}</strong><small>${formatMinutes(summary.duration)}</small><progress class="daily-load-track ${status}" aria-label="Geschatte taakduur ${WEEKDAYS[index][1]}" value="${summary.duration}" max="${summary.capacity}"></progress></div>`;
+      return `<details class="daily-summary"><summary><span>${WEEKDAYS[index][1]}</span><strong>${summary.count}</strong><small>${formatMinutes(summary.duration)}</small><progress class="daily-load-track ${status}" aria-label="Geschatte taakduur ${WEEKDAYS[index][1]}" value="${summary.duration}" max="${summary.capacity}"></progress></summary><div class="daily-dayparts" aria-label="Belasting per dagdeel">${summary.dayparts.map((part) => {
+        const partPercentage = Math.round((part.duration / part.capacity) * 100),
+          partStatus =
+            partPercentage > CAPACITY_OVERLOAD_PERCENTAGE
+              ? "is-over"
+              : partPercentage > CAPACITY_WARNING_PERCENTAGE
+                ? "is-warning"
+                : "is-ok";
+        return `<div class="daily-daypart"><span>${part.label}</span><small>${part.count} · ${formatMinutes(part.duration)}</small><progress class="daily-daypart-track ${partStatus}" aria-label="${part.label}: ${formatMinutes(part.duration)}" value="${part.duration}" max="${part.capacity}"></progress></div>`;
+      }).join("")}</div></details>`;
     })
     .join(
       "",
@@ -355,7 +371,9 @@ function manage() {
           (state.filters.active === "" ||
             String(a.active) === state.filters.active) &&
           (!state.filters.recurrence ||
-            a.recurrence.type === state.filters.recurrence),
+            (state.filters.recurrence === "weekly"
+              ? ["daily", "weekly"].includes(a.recurrence.type)
+              : a.recurrence.type === state.filters.recurrence)),
       ),
     ),
     restricted = filtered.length !== all.length,
@@ -365,9 +383,9 @@ function manage() {
         state.filters.active ||
         state.filters.recurrence,
     );
-  return `<section><div class="page-heading"><div><p class="eyebrow">Aan de slag</p><h1>Planning bewerken</h1></div><button class="button primary" id="add-activity">Activiteit toevoegen</button></div><div class="toolbar filters${restricted ? " has-filter-warning" : ""}"><label>Zoeken<input id="filter-q" value="${esc(state.filters.q)}" placeholder="Naam of beschrijving"></label><label class="day-filter-label"><span>Dag <button type="button" class="filter-info" aria-expanded="false" aria-label="Uitleg geplande tijd">ⓘ</button><span class="filter-info-text" hidden>Selecteer een dag voor meer inzicht in de geplande tijd per dagdeel.</span></span><select id="filter-day"><option value="">Alle dagen</option>${WEEKDAYS.map((x) => `<option value="${x[0]}" ${state.filters.day === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Herhaling<select id="filter-recurrence"><option value="">Alle herhalingen</option><option value="daily" ${state.filters.recurrence === "daily" ? "selected" : ""}>Dagelijks</option><option value="weekly" ${state.filters.recurrence === "weekly" ? "selected" : ""}>Wekelijks</option><option value="monthly" ${state.filters.recurrence === "monthly" ? "selected" : ""}>Maandelijks</option></select></label><label>Status<select id="filter-active"><option value="">Alle</option><option value="true" ${state.filters.active === "true" ? "selected" : ""}>Actief</option><option value="false" ${state.filters.active === "false" ? "selected" : ""}>Inactief</option></select></label>${hasFilters ? '<button type="button" class="button small" id="clear-filters">Filters wissen</button>' : ""}${restricted ? '    <p class="manage-restricted"><span class="message-label">Let op:</span> <span>Verslepen is uitgeschakeld zolang er filters actief zijn.</span></p>' : ""}</div><div class="manage-list">${DAYPARTS.map(
+  return `<section><div class="page-heading"><div><p class="eyebrow">Aan de slag</p><h1>Planning bewerken</h1></div><button class="button primary" id="add-activity">Activiteit toevoegen</button></div><div class="toolbar filters${restricted ? " has-filter-warning" : ""}"><label>Zoeken<input id="filter-q" value="${esc(state.filters.q)}" placeholder="Naam of beschrijving"></label><label class="day-filter-label"><span>Dag <button type="button" class="filter-info" aria-expanded="false" aria-label="Uitleg geplande tijd">ⓘ</button><span class="filter-info-text" hidden>Selecteer een dag voor meer inzicht in de geplande tijd per dagdeel.</span></span><select id="filter-day"><option value="">Alle dagen</option>${WEEKDAYS.map((x) => `<option value="${x[0]}" ${state.filters.day === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Herhaling<select id="filter-recurrence"><option value="">Alle herhalingen</option><option value="weekly" ${state.filters.recurrence === "weekly" ? "selected" : ""}>Dagen</option><option value="monthly" ${state.filters.recurrence === "monthly" ? "selected" : ""}>Maandelijks</option></select></label><label>Status<select id="filter-active"><option value="">Alle</option><option value="true" ${state.filters.active === "true" ? "selected" : ""}>Actief</option><option value="false" ${state.filters.active === "false" ? "selected" : ""}>Inactief</option></select></label>${hasFilters ? '<button type="button" class="button small" id="clear-filters">Filters wissen</button>' : ""}${restricted ? '    <p class="manage-restricted"><span class="message-label">Let op:</span> <span>Verslepen is uitgeschakeld zolang er filters actief zijn.</span></p>' : ""}</div><div class="manage-list">${DAYPARTS.map(
     ([key, label]) =>
-      `<section class="manage-group"><h2>${label} <small>(${timeValue(state.plan, state.filters.day || DEFAULT_DEADLINE_DAY, key)})</small></h2>${capacitySummary(all, key, state.filters.day)}<div data-dropzone="${key}">${
+      `<section class="manage-group"><h2>${label} <small>(${timeValue(state.plan, state.filters.day || DEFAULT_DEADLINE_DAY, key)})</small>${!state.filters.day && afwijkendeDagenVoorDagdeel(state.plan, key).length ? `<small class="manage-time-exception">Tijden wijken af op: ${esc(afwijkendeDagenVoorDagdeel(state.plan, key).join(", "))}</small>` : ""}</h2>${capacitySummary(all, key, state.filters.day)}<div class="manage-columns" aria-hidden="true"><span></span><span>Activiteit</span>${WEEKDAYS.map(([, day]) => `<span>${day.slice(0, 2)}</span>`).join("")}<span></span></div><div data-dropzone="${key}">${
         filtered
           .filter((a) => a.daypart === key)
           .map((a) => manageCard(a, restricted))
@@ -376,8 +394,18 @@ function manage() {
   ).join("")}</div></section>`;
 }
 function manageCard(a, restricted) {
-  const instruction = a.workInstruction?.trim();
-  return `<article class="manage-card ${a.active ? "" : "inactive"}" draggable="${!restricted}" data-id="${esc(a.id)}"><span class="drag-handle" title="Verslepen om te sorteren" aria-label="Verslepen om te sorteren">⋮⋮</span><div class="manage-info"><strong>${esc(a.name)}</strong><span>${esc(a.description)}</span><small><span class="meta-item" title="Herhaling">↻ ${esc(recurrenceLabel(a.recurrence))}</span>${a.durationMinutes ? `<span class="meta-item" title="Uitvoeringsduur">◷ ${formatMinutes(a.durationMinutes)}</span>` : ""}${a.deadline ? `<span class="deadline" aria-label="Uiterlijk om ${esc(a.deadline)}">◷ ${esc(a.deadline)}</span>` : ""}${instruction ? '<span class="meta-item instruction-meta" title="Werkinstructie beschikbaar" aria-label="Werkinstructie beschikbaar">✦ Werkinstructie</span>' : ""}</small></div><div class="manage-actions"><button class="icon-button edit" data-id="${a.id}" title="Bewerken" aria-label="Bewerken">✎</button><button class="icon-button copy" data-id="${a.id}" title="Kopiëren" aria-label="Kopiëren">⧉</button><button class="icon-button delete" data-id="${a.id}" title="Verwijderen" aria-label="Verwijderen">×</button></div></article>`;
+  const instruction = a.workInstruction?.trim(),
+    monthlyMeta =
+      a.recurrence.type === "monthly"
+        ? `<span class="manage-monthly-recurrence">Maandelijks · elke ${esc(MONTHLY_OCCURRENCES.find(([key]) => key === String(a.recurrence.occurrence))?.[1] || "onbekend")} ${esc(WEEKDAYS.find(([key]) => key === a.recurrence.weekday)?.[1].toLowerCase() || "onbekende dag")}</span>`
+        : "",
+    days =
+      a.recurrence.type === "daily"
+        ? WEEKDAYS.map(([day]) => day)
+        : a.recurrence.type === "weekly"
+          ? a.recurrence.weekdays
+          : [a.recurrence.weekday];
+  return `<article class="manage-card ${a.active ? "" : "inactive"}" draggable="${!restricted}" data-id="${esc(a.id)}"><span class="drag-handle" title="Verslepen om te sorteren" aria-label="Verslepen om te sorteren">⋮⋮</span><div class="manage-info"><strong>${esc(a.name)}</strong><span>${esc(a.description)}</span><small>${a.durationMinutes ? `<span class="meta-item" title="Uitvoeringsduur">◷ ${formatMinutes(a.durationMinutes)}</span>` : ""}${a.deadline ? `<span class="deadline" aria-label="Uiterlijk om ${esc(a.deadline)}">◷ ${esc(a.deadline)}</span>` : ""}${instruction ? '<span class="meta-item instruction-meta" title="Werkinstructie beschikbaar" aria-label="Werkinstructie beschikbaar">✦ Werkinstructie</span>' : ""}</small></div><div class="manage-days" aria-label="Uitvoeringsdagen">${WEEKDAYS.map(([day, label]) => `<span class="${days.includes(day) ? "is-scheduled" : ""}" title="${days.includes(day) ? `${label}: uitvoeren` : `${label}: niet uitvoeren`}">${days.includes(day) ? "✓" : "–"}</span>`).join("")}${monthlyMeta}</div><div class="manage-actions"><button class="icon-button edit" data-id="${a.id}" title="Bewerken" aria-label="Bewerken">✎</button><button class="icon-button copy" data-id="${a.id}" title="Kopiëren" aria-label="Kopiëren">⧉</button><button class="icon-button delete" data-id="${a.id}" title="Verwijderen" aria-label="Verwijderen">×</button></div></article>`;
 }
 function form(existing) {
   const a = existing || {
@@ -390,9 +418,9 @@ function form(existing) {
     deadline: "",
     daypart: "morning",
     sortOrder: 0,
-    recurrence: { type: "daily" },
+    recurrence: { type: "weekly", weekdays: WEEKDAYS.map(([day]) => day) },
   };
-  return `<dialog id="activity-dialog"><form id="activity-form"><h2>${existing ? "Activiteit bewerken" : "Activiteit toevoegen"}</h2><p class="form-help">Velden met <span class="required-mark">*</span> zijn verplicht.</p><input name="id" type="hidden" value="${esc(a.id)}"><label>Naam<span class="required-mark">*</span><input required name="name" value="${esc(a.name)}"></label><label>Korte beschrijving<textarea name="description">${esc(a.description || "")}</textarea></label><label>Werkinstructie<textarea name="workInstruction">${esc(a.workInstruction || "")}</textarea></label><label>Indicatie uitvoeringsduur in minuten<span class="required-mark">*</span><input required name="durationMinutes" type="number" min="1" value="${a.durationMinutes ?? ""}"></label><label>Deadline<input name="deadline" type="time" value="${esc(a.deadline || "")}"><span class="deadline-warning" hidden></span></label><label>Dagdeel<span class="required-mark">*</span><select required name="daypart">${DAYPARTS.map((x) => `<option value="${x[0]}" ${a.daypart === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Herhaling<span class="required-mark">*</span><select required name="recurrenceType"><option value="daily" ${a.recurrence.type === "daily" ? "selected" : ""}>Dagelijks</option><option value="weekly" ${a.recurrence.type === "weekly" ? "selected" : ""}>Wekelijks</option><option value="monthly" ${a.recurrence.type === "monthly" ? "selected" : ""}>Maandelijks</option></select></label><fieldset class="weekly-fields"><legend>Weekdagen<span class="required-mark">*</span></legend>${WEEKDAYS.map((x) => `<label class="check-label"><input type="checkbox" name="weekday" value="${x[0]}" ${a.recurrence.weekdays?.includes(x[0]) ? "checked" : ""}>${x[1]}</label>`).join("")}</fieldset><div class="monthly-fields"><label>Week van de maand<span class="required-mark">*</span><select name="monthOccurrence">${MONTHLY_OCCURRENCES.map((x) => `<option value="${x[0]}" ${String(a.recurrence.occurrence) === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Weekdag<span class="required-mark">*</span><select name="monthWeekday">${WEEKDAYS.map((x) => `<option value="${x[0]}" ${a.recurrence.weekday === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label></div><label class="check-label"><input type="checkbox" name="active" ${a.active ? "checked" : ""}>Actief</label><div class="dialog-actions"><button type="button" class="button" id="cancel-activity">Annuleren</button><button class="button primary">Opslaan</button></div></form></dialog>`;
+  return `<dialog id="activity-dialog"><form id="activity-form" autocomplete="off"><h2>${existing ? "Activiteit bewerken" : "Activiteit toevoegen"}</h2><p class="form-help">Velden met <span class="required-mark">*</span> zijn verplicht.</p><input name="id" type="hidden" value="${esc(a.id)}"><label>Naam<span class="required-mark">*</span><input autocomplete="off" required name="name" value="${esc(a.name)}"></label><label>Korte beschrijving<textarea autocomplete="off" name="description">${esc(a.description || "")}</textarea></label><label>Werkinstructie<textarea autocomplete="off" name="workInstruction">${esc(a.workInstruction || "")}</textarea></label><label>Indicatie uitvoeringsduur in minuten<span class="required-mark">*</span><input autocomplete="off" required name="durationMinutes" type="number" min="1" value="${a.durationMinutes ?? ""}"></label><label>Deadline<div class="deadline-input"><input autocomplete="off" name="deadline" type="time" value="${esc(a.deadline || "")}"><button type="button" class="button small clear-deadline">Wissen</button></div><span class="deadline-warning" hidden></span></label><label>Dagdeel<span class="required-mark">*</span><select required name="daypart">${DAYPARTS.map((x) => `<option value="${x[0]}" ${a.daypart === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Herhaling<select required name="recurrenceType"><option value="weekly" ${a.recurrence.type !== "monthly" ? "selected" : ""}>Dagen</option><option value="monthly" ${a.recurrence.type === "monthly" ? "selected" : ""}>Maandelijks</option></select></label><fieldset class="weekly-fields"><legend>Dagen<span class="required-mark">*</span></legend><label class="check-label select-all-days"><input type="checkbox" name="allDays">Alle dagen</label>${WEEKDAYS.map((x) => `<label class="check-label"><input type="checkbox" name="weekday" value="${x[0]}" ${(a.recurrence.type === "daily" || a.recurrence.weekdays?.includes(x[0])) ? "checked" : ""}>${x[1]}</label>`).join("")}</fieldset><div class="monthly-fields"><label>Week van de maand<span class="required-mark">*</span><select name="monthOccurrence">${MONTHLY_OCCURRENCES.map((x) => `<option value="${x[0]}" ${String(a.recurrence.occurrence) === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Weekdag<span class="required-mark">*</span><select name="monthWeekday">${WEEKDAYS.map((x) => `<option value="${x[0]}" ${a.recurrence.weekday === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label></div><label class="check-label"><input type="checkbox" name="active" ${a.active ? "checked" : ""}>Actief</label><div class="dialog-actions"><button type="button" class="button" id="cancel-activity">Annuleren</button><button class="button primary">Opslaan</button></div></form></dialog>`;
 }
 const handbookIntro = () => state.plan.metadata.handbookIntro;
 function editHandbookIntro() {
@@ -624,16 +652,18 @@ function bindPage() {
     z.addEventListener("drop", (e) => {
       e.preventDefault();
       const id = e.dataTransfer.getData("text/plain"),
-        target = e.target.closest("[data-id]");
+        target = e.target.closest("[data-id]"),
+        dropzone = e.currentTarget;
       document
         .querySelectorAll(".drop-target")
         .forEach((x) => x.classList.remove("drop-target"));
-      if (id && target) {
+      if (id && dropzone.dataset.dropzone) {
         const after =
+          target &&
           e.clientY >
-          target.getBoundingClientRect().top +
-            target.getBoundingClientRect().height / 2;
-        reorder(id, target.dataset.id, after);
+            target.getBoundingClientRect().top +
+              target.getBoundingClientRect().height / 2;
+        reorder(id, target?.dataset.id, after, dropzone.dataset.dropzone);
       }
     }),
   );
@@ -676,11 +706,12 @@ function showForm(existing) {
   };
   for (const [name, config] of Object.entries(fieldConfig)) {
     const input = d.querySelector(`[name="${name}"]`),
-      label = input?.closest("label");
+      label = input?.closest("label"),
+      anchor = input?.parentElement === label ? input : input?.parentElement;
     if (!input || !label) continue;
     const title = document.createElement("span");
     title.className = "field-label";
-    while (label.firstChild && label.firstChild !== input)
+    while (label.firstChild && label.firstChild !== anchor)
       label.firstChild.remove();
     title.textContent = config.label;
     if (config.required) {
@@ -689,12 +720,12 @@ function showForm(existing) {
       mark.textContent = "*";
       title.append(mark);
     }
-    label.insertBefore(title, input);
+    label.insertBefore(title, anchor);
     if (config.help) {
       const help = document.createElement("small");
       help.className = "field-help";
       help.textContent = config.help;
-      label.insertBefore(help, input);
+      label.insertBefore(help, anchor);
     }
   }
   monthlyFieldset.className = "monthly-fields";
@@ -740,9 +771,25 @@ function showForm(existing) {
       const monthly = type.value === "monthly";
       d.querySelector(".weekly-fields").hidden = type.value !== "weekly";
       d.querySelector(".monthly-fields").hidden = !monthly;
+      const weekdayInputs = [...d.querySelectorAll('input[name="weekday"]')],
+        allDays = d.querySelector('input[name="allDays"]');
+      allDays.checked =
+        weekdayInputs.length > 0 && weekdayInputs.every((input) => input.checked);
     };
   type.addEventListener("change", sync);
+  d.querySelector('input[name="allDays"]').addEventListener("change", (e) => {
+    d.querySelectorAll('input[name="weekday"]').forEach(
+      (input) => (input.checked = e.target.checked),
+    );
+  });
+  d.querySelectorAll('input[name="weekday"]').forEach((input) => {
+    input.addEventListener("change", sync);
+  });
   deadline.addEventListener("input", updateDeadlineWarning);
+  d.querySelector(".clear-deadline").addEventListener("click", () => {
+    deadline.value = "";
+    updateDeadlineWarning();
+  });
   daypart.addEventListener("change", updateDeadlineWarning);
   sync();
   updateDeadlineWarning();
@@ -753,10 +800,8 @@ function showForm(existing) {
     const fd = new FormData(f),
       old = existing,
       recurrence =
-        type.value === "daily"
-          ? { type: "daily" }
-          : type.value === "weekly"
-            ? { type: "weekly", weekdays: fd.getAll("weekday") }
+        type.value === "weekly"
+          ? { type: "weekly", weekdays: fd.getAll("weekday") }
             : {
                 type: "monthly",
                 occurrence: fd.get("monthOccurrence"),
@@ -829,17 +874,17 @@ function move(id, direction) {
   setStatus("Wijzigingen nog niet opgeslagen", true);
   render();
 }
-function reorder(id, targetId, after = false) {
-  const a = state.plan.activities.find((x) => x.id === id),
-    t = state.plan.activities.find((x) => x.id === targetId);
-  if (!a || !t || a.daypart !== t.daypart || id === targetId) return;
-  const list = orderActivities(
-    state.plan.activities.filter((x) => x.daypart === a.daypart),
-  ).filter((x) => x.id !== id);
-  let index = list.findIndex((x) => x.id === targetId);
-  if (after) index += 1;
-  list.splice(index, 0, a);
-  list.forEach((x, i) => (x.sortOrder = i));
+function reorder(id, targetId, after = false, targetDaypart) {
+  if (
+    !reorderActivities(
+      state.plan.activities,
+      id,
+      targetId,
+      after,
+      targetDaypart,
+    )
+  )
+    return;
   setStatus("Wijzigingen nog niet opgeslagen", true);
   render();
 }
