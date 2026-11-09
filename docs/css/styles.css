@@ -1038,6 +1038,13 @@ dialog label {
   min-height: 0;
   text-align: left;
 }
+.daily-counts > .daily-summary > summary > small em {
+  margin-left: 0.3rem;
+  color: #87958d;
+  font-size: 0.58rem;
+  font-style: normal;
+  font-weight: 500;
+}
 .daily-counts > .daily-summary > summary > .daily-load-track {
   width: 100%;
   margin-top: 0;
