@@ -218,7 +218,7 @@ function home() {
             : percentage > CAPACITY_WARNING_PERCENTAGE
               ? "is-warning"
               : "is-ok";
-      return `<details class="daily-summary"><summary><span>${WEEKDAYS[index][1]}</span><small>${formatMinutes(summary.duration)}</small><progress class="daily-load-track ${status}" aria-label="Geschatte taakduur ${WEEKDAYS[index][1]}" value="${summary.duration}" max="${summary.capacity}"></progress></summary><div class="daily-dayparts" aria-label="Belasting per dagdeel">${summary.dayparts.map((part) => {
+      return `<details class="daily-summary"><summary><span>${WEEKDAYS[index][1]}</span><small>${formatMinutes(summary.duration)} <em>${percentage}%</em></small><progress class="daily-load-track ${status}" aria-label="Geschatte taakduur ${WEEKDAYS[index][1]}: ${percentage}%" value="${summary.duration}" max="${summary.capacity}"></progress></summary><div class="daily-dayparts" aria-label="Belasting per dagdeel">${summary.dayparts.map((part) => {
         const partPercentage = Math.round((part.duration / part.capacity) * 100),
           partStatus =
             partPercentage > CAPACITY_OVERLOAD_PERCENTAGE
