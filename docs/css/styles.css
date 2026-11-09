@@ -995,7 +995,7 @@ dialog label {
 }
 .daily-counts > .daily-summary > summary {
   display: grid;
-  grid-template-columns: 7rem 5rem 11rem minmax(12rem, 1fr);
+  grid-template-columns: 7rem 11rem minmax(12rem, 1fr);
   align-items: center;
   justify-items: start;
   gap: 0.2rem 0.75rem;
@@ -1051,7 +1051,7 @@ dialog label {
   border-top-color: #dce7e0;
 }
 .daily-daypart {
-  grid-template-columns: 8rem 11rem minmax(8rem, 1fr);
+  grid-template-columns: 8rem minmax(11rem, 14rem) minmax(8rem, 1fr);
   min-width: 0;
   padding: 0.35rem 0.5rem;
   border-radius: 5px;
@@ -1062,8 +1062,34 @@ dialog label {
   font-weight: 600;
 }
 .daily-daypart small {
-  font-size: 0.64rem;
+  min-width: 0;
+  color: #4f6258;
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 1.2;
   text-align: left;
+}
+.daily-daypart small strong,
+.daily-daypart small em {
+  display: inline;
+}
+.daily-daypart small strong {
+  color: inherit;
+  font-size: inherit;
+  font-weight: 600;
+}
+.daily-daypart small em {
+  margin-left: 0.3rem;
+  color: #87958d;
+  font-size: 0.56rem;
+  font-style: normal;
+  font-weight: 500;
+}
+.daily-daypart small.is-over {
+  color: var(--red);
+}
+.daily-daypart small.is-full {
+  color: #8a641c;
 }
 .daily-daypart-track {
   grid-column: 3;
@@ -1078,12 +1104,12 @@ dialog label {
     padding-right: 0;
   }
   .daily-counts > .daily-summary {
-    grid-template-columns: 5rem 4rem 1fr;
+    grid-template-columns: 5rem 1fr;
     gap: 0.2rem 0.5rem;
     padding: 0.65rem;
   }
   .daily-counts > .daily-summary > summary {
-    grid-template-columns: 5rem 4rem 1fr;
+    grid-template-columns: 5rem 1fr;
   }
   .daily-counts > .daily-summary > summary > .daily-load-track {
     grid-column: 1 / -1;

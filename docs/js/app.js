@@ -207,7 +207,7 @@ function home() {
         dayparts,
       };
     });
-  return `<section class="hero"><div class="page-heading"><div><p class="eyebrow">Overzicht</p><h1>${esc(state.plan.metadata.title)}</h1></div><button type="button" class="button" id="edit-opening-times">Dagdelen aanpassen</button></div><p class="lead">Hier vind je een overzicht van je planning en activiteiten.</p><div class="home-meta"><div class="home-meta-primary"><span>Afdeling</span><strong>${esc(state.plan.metadata.department)}</strong></div><div class="home-meta-primary"><span>Actieve activiteiten</span><strong>${activeCount} van ${state.plan.activities.length}</strong></div><div><span>Bestandsstatus</span><strong class="${state.dirty ? "is-unsaved" : "is-saved"}">${fileStatus}</strong></div><div><span>Laatst gewijzigd</span><strong>${esc(lastUpdated)}</strong></div></div><section class="daily-overview" aria-labelledby="daily-overview-title"><div class="daily-overview-heading"><h2 id="daily-overview-title">Activiteiten per dag</h2><span>Deze week</span></div><div class="daily-counts">${dailySummaries
+  return `<section class="hero"><div class="page-heading"><div><p class="eyebrow">Overzicht</p><h1>${esc(state.plan.metadata.title)}</h1></div><button type="button" class="button" id="edit-opening-times">Dagdelen aanpassen</button></div><p class="lead">Hier vind je een overzicht van je planning en activiteiten.</p><div class="home-meta"><div class="home-meta-primary"><span>Afdeling</span><strong>${esc(state.plan.metadata.department)}</strong></div><div class="home-meta-primary"><span>Actieve activiteiten</span><strong>${activeCount} van ${state.plan.activities.length}</strong></div><div><span>Bestandsstatus</span><strong class="${state.dirty ? "is-unsaved" : "is-saved"}">${fileStatus}</strong></div><div><span>Laatst gewijzigd</span><strong>${esc(lastUpdated)}</strong></div></div><section class="daily-overview" aria-labelledby="daily-overview-title"><div class="daily-overview-heading"><h2 id="daily-overview-title">Activiteiten per dag</h2><span>Deze week</span></div><p class="daily-overview-help">Per dagdeel zie je hoeveel tijd er nog beschikbaar is. Bij een overschrijding zie je hoeveel tijd er te veel is ingepland.</p><div class="daily-counts">${dailySummaries
     .map((summary, index) => {
       const percentage = Math.round(
           (summary.duration / summary.capacity) * 100,
@@ -218,7 +218,7 @@ function home() {
             : percentage > CAPACITY_WARNING_PERCENTAGE
               ? "is-warning"
               : "is-ok";
-      return `<details class="daily-summary"><summary><span>${WEEKDAYS[index][1]}</span><strong>${summary.count}</strong><small>${formatMinutes(summary.duration)}</small><progress class="daily-load-track ${status}" aria-label="Geschatte taakduur ${WEEKDAYS[index][1]}" value="${summary.duration}" max="${summary.capacity}"></progress></summary><div class="daily-dayparts" aria-label="Belasting per dagdeel">${summary.dayparts.map((part) => {
+      return `<details class="daily-summary"><summary><span>${WEEKDAYS[index][1]}</span><small>${formatMinutes(summary.duration)}</small><progress class="daily-load-track ${status}" aria-label="Geschatte taakduur ${WEEKDAYS[index][1]}" value="${summary.duration}" max="${summary.capacity}"></progress></summary><div class="daily-dayparts" aria-label="Belasting per dagdeel">${summary.dayparts.map((part) => {
         const partPercentage = Math.round((part.duration / part.capacity) * 100),
           partStatus =
             partPercentage > CAPACITY_OVERLOAD_PERCENTAGE
@@ -226,7 +226,16 @@ function home() {
               : partPercentage > CAPACITY_WARNING_PERCENTAGE
                 ? "is-warning"
                 : "is-ok";
-        return `<div class="daily-daypart"><span>${part.label}</span><small>${part.count} · ${formatMinutes(part.duration)}</small><progress class="daily-daypart-track ${partStatus}" aria-label="${part.label}: ${formatMinutes(part.duration)}" value="${part.duration}" max="${part.capacity}"></progress></div>`;
+        const difference = part.capacity - part.duration,
+          loadPercentage = Math.round((part.duration / part.capacity) * 100),
+          loadLabel =
+            difference > 0
+              ? `${difference} minuten over`
+              : difference < 0
+                ? `${Math.abs(difference)} minuten teveel`
+                : "0 minuten over",
+          percentageLabel = `${loadPercentage}%`;
+        return `<div class="daily-daypart"><span>${part.label}</span><small class="${difference < 0 ? "is-over" : difference === 0 ? "is-full" : ""}" aria-label="${part.label}: ${loadLabel}, ${percentageLabel}"><strong>${loadLabel}</strong><em>${percentageLabel}</em></small><progress class="daily-daypart-track ${partStatus}" aria-label="${part.label}: ${loadLabel}" value="${part.duration}" max="${part.capacity}"></progress></div>`;
       }).join("")}</div></details>`;
     })
     .join(
