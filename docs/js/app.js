@@ -642,16 +642,18 @@ function bindPage() {
     z.addEventListener("drop", (e) => {
       e.preventDefault();
       const id = e.dataTransfer.getData("text/plain"),
-        target = e.target.closest("[data-id]");
+        target = e.target.closest("[data-id]"),
+        dropzone = e.currentTarget;
       document
         .querySelectorAll(".drop-target")
         .forEach((x) => x.classList.remove("drop-target"));
-      if (id && target) {
+      if (id && dropzone.dataset.dropzone) {
         const after =
+          target &&
           e.clientY >
-          target.getBoundingClientRect().top +
-            target.getBoundingClientRect().height / 2;
-        reorder(id, target.dataset.id, after);
+            target.getBoundingClientRect().top +
+              target.getBoundingClientRect().height / 2;
+        reorder(id, target?.dataset.id, after, dropzone.dataset.dropzone);
       }
     }),
   );
@@ -862,17 +864,23 @@ function move(id, direction) {
   setStatus("Wijzigingen nog niet opgeslagen", true);
   render();
 }
-function reorder(id, targetId, after = false) {
+function reorder(id, targetId, after = false, targetDaypart) {
   const a = state.plan.activities.find((x) => x.id === id),
     t = state.plan.activities.find((x) => x.id === targetId);
-  if (!a || !t || a.daypart !== t.daypart || id === targetId) return;
+  if (!a || (targetId && (!t || id === targetId))) return;
+  const originalDaypart = a.daypart;
+  const daypart = targetDaypart || t.daypart;
+  if (!DAYPARTS.some(([key]) => key === daypart)) return;
   const list = orderActivities(
-    state.plan.activities.filter((x) => x.daypart === a.daypart),
-  ).filter((x) => x.id !== id);
-  let index = list.findIndex((x) => x.id === targetId);
-  if (after) index += 1;
+    state.plan.activities.filter((x) => x.daypart === daypart && x.id !== id),
+  );
+  let index = targetId ? list.findIndex((x) => x.id === targetId) : list.length;
+  if (targetId && after) index += 1;
+  if (targetId && index < 0) return;
+  a.daypart = daypart;
   list.splice(index, 0, a);
   list.forEach((x, i) => (x.sortOrder = i));
+  if (daypart !== originalDaypart) renumber(originalDaypart);
   setStatus("Wijzigingen nog niet opgeslagen", true);
   render();
 }
