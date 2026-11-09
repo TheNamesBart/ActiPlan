@@ -410,7 +410,7 @@ function form(existing) {
     sortOrder: 0,
     recurrence: { type: "weekly", weekdays: WEEKDAYS.map(([day]) => day) },
   };
-  return `<dialog id="activity-dialog"><form id="activity-form"><h2>${existing ? "Activiteit bewerken" : "Activiteit toevoegen"}</h2><p class="form-help">Velden met <span class="required-mark">*</span> zijn verplicht.</p><input name="id" type="hidden" value="${esc(a.id)}"><label>Naam<span class="required-mark">*</span><input required name="name" value="${esc(a.name)}"></label><label>Korte beschrijving<textarea name="description">${esc(a.description || "")}</textarea></label><label>Werkinstructie<textarea name="workInstruction">${esc(a.workInstruction || "")}</textarea></label><label>Indicatie uitvoeringsduur in minuten<span class="required-mark">*</span><input required name="durationMinutes" type="number" min="1" value="${a.durationMinutes ?? ""}"></label><label>Deadline<input name="deadline" type="time" value="${esc(a.deadline || "")}"><span class="deadline-warning" hidden></span></label><label>Dagdeel<span class="required-mark">*</span><select required name="daypart">${DAYPARTS.map((x) => `<option value="${x[0]}" ${a.daypart === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Herhaling<select required name="recurrenceType"><option value="weekly" ${a.recurrence.type !== "monthly" ? "selected" : ""}>Dagen</option><option value="monthly" ${a.recurrence.type === "monthly" ? "selected" : ""}>Maandelijks</option></select></label><fieldset class="weekly-fields"><legend>Dagen<span class="required-mark">*</span></legend><label class="check-label select-all-days"><input type="checkbox" name="allDays">Alle dagen</label>${WEEKDAYS.map((x) => `<label class="check-label"><input type="checkbox" name="weekday" value="${x[0]}" ${(a.recurrence.type === "daily" || a.recurrence.weekdays?.includes(x[0])) ? "checked" : ""}>${x[1]}</label>`).join("")}</fieldset><div class="monthly-fields"><label>Week van de maand<span class="required-mark">*</span><select name="monthOccurrence">${MONTHLY_OCCURRENCES.map((x) => `<option value="${x[0]}" ${String(a.recurrence.occurrence) === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Weekdag<span class="required-mark">*</span><select name="monthWeekday">${WEEKDAYS.map((x) => `<option value="${x[0]}" ${a.recurrence.weekday === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label></div><label class="check-label"><input type="checkbox" name="active" ${a.active ? "checked" : ""}>Actief</label><div class="dialog-actions"><button type="button" class="button" id="cancel-activity">Annuleren</button><button class="button primary">Opslaan</button></div></form></dialog>`;
+  return `<dialog id="activity-dialog"><form id="activity-form"><h2>${existing ? "Activiteit bewerken" : "Activiteit toevoegen"}</h2><p class="form-help">Velden met <span class="required-mark">*</span> zijn verplicht.</p><input name="id" type="hidden" value="${esc(a.id)}"><label>Naam<span class="required-mark">*</span><input required name="name" value="${esc(a.name)}"></label><label>Korte beschrijving<textarea name="description">${esc(a.description || "")}</textarea></label><label>Werkinstructie<textarea name="workInstruction">${esc(a.workInstruction || "")}</textarea></label><label>Indicatie uitvoeringsduur in minuten<span class="required-mark">*</span><input required name="durationMinutes" type="number" min="1" value="${a.durationMinutes ?? ""}"></label><label>Deadline<div class="deadline-input"><input name="deadline" type="time" value="${esc(a.deadline || "")}"><button type="button" class="button small clear-deadline">Wissen</button></div><span class="deadline-warning" hidden></span></label><label>Dagdeel<span class="required-mark">*</span><select required name="daypart">${DAYPARTS.map((x) => `<option value="${x[0]}" ${a.daypart === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Herhaling<select required name="recurrenceType"><option value="weekly" ${a.recurrence.type !== "monthly" ? "selected" : ""}>Dagen</option><option value="monthly" ${a.recurrence.type === "monthly" ? "selected" : ""}>Maandelijks</option></select></label><fieldset class="weekly-fields"><legend>Dagen<span class="required-mark">*</span></legend><label class="check-label select-all-days"><input type="checkbox" name="allDays">Alle dagen</label>${WEEKDAYS.map((x) => `<label class="check-label"><input type="checkbox" name="weekday" value="${x[0]}" ${(a.recurrence.type === "daily" || a.recurrence.weekdays?.includes(x[0])) ? "checked" : ""}>${x[1]}</label>`).join("")}</fieldset><div class="monthly-fields"><label>Week van de maand<span class="required-mark">*</span><select name="monthOccurrence">${MONTHLY_OCCURRENCES.map((x) => `<option value="${x[0]}" ${String(a.recurrence.occurrence) === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Weekdag<span class="required-mark">*</span><select name="monthWeekday">${WEEKDAYS.map((x) => `<option value="${x[0]}" ${a.recurrence.weekday === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label></div><label class="check-label"><input type="checkbox" name="active" ${a.active ? "checked" : ""}>Actief</label><div class="dialog-actions"><button type="button" class="button" id="cancel-activity">Annuleren</button><button class="button primary">Opslaan</button></div></form></dialog>`;
 }
 const handbookIntro = () => state.plan.metadata.handbookIntro;
 function editHandbookIntro() {
@@ -694,11 +694,12 @@ function showForm(existing) {
   };
   for (const [name, config] of Object.entries(fieldConfig)) {
     const input = d.querySelector(`[name="${name}"]`),
-      label = input?.closest("label");
+      label = input?.closest("label"),
+      anchor = input?.parentElement === label ? input : input?.parentElement;
     if (!input || !label) continue;
     const title = document.createElement("span");
     title.className = "field-label";
-    while (label.firstChild && label.firstChild !== input)
+    while (label.firstChild && label.firstChild !== anchor)
       label.firstChild.remove();
     title.textContent = config.label;
     if (config.required) {
@@ -707,12 +708,12 @@ function showForm(existing) {
       mark.textContent = "*";
       title.append(mark);
     }
-    label.insertBefore(title, input);
+    label.insertBefore(title, anchor);
     if (config.help) {
       const help = document.createElement("small");
       help.className = "field-help";
       help.textContent = config.help;
-      label.insertBefore(help, input);
+      label.insertBefore(help, anchor);
     }
   }
   monthlyFieldset.className = "monthly-fields";
@@ -773,6 +774,10 @@ function showForm(existing) {
     input.addEventListener("change", sync);
   });
   deadline.addEventListener("input", updateDeadlineWarning);
+  d.querySelector(".clear-deadline").addEventListener("click", () => {
+    deadline.value = "";
+    updateDeadlineWarning();
+  });
   daypart.addEventListener("change", updateDeadlineWarning);
   sync();
   updateDeadlineWarning();

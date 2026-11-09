@@ -83,6 +83,21 @@
   font-weight: normal;
   line-height: 1.35;
 }
+.deadline-input {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  gap: 0.6rem;
+}
+.deadline-input input {
+  flex: 0 0 7.5rem;
+  width: 7.5rem;
+}
+.deadline-input .clear-deadline {
+  color: #607269;
+  background: #f8faf8;
+  border-color: var(--line);
+}
 
 .handbook-deadline {
   margin: 0.5rem 0;
