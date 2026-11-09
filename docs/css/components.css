@@ -215,8 +215,8 @@ a:focus-visible {
 }
 
 .handbook-edit {
-  align-self: flex-start;
-  margin-top: 0.5rem;
+  align-self: center;
+  margin-top: 0;
 }
 
 .handbook-actions {
