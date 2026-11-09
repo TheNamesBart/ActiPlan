@@ -6,6 +6,7 @@ import {
   samplePlan,
   validatePlan,
   orderActivities,
+  reorderActivities,
   activitiesForDate,
   dateKey,
   parseDate,
@@ -15,7 +16,7 @@ import {
   weeksInYear,
   dateFromIsoWeek,
   recurrenceLabel,
-} from "./core.js?v=4";
+} from "./core.js?v=5";
 import { $, esc } from "./ui.js";
 import { confirmDialog, promptDialog } from "./dialogs.js?v=4";
 const today = dateKey(new Date());
@@ -865,22 +866,16 @@ function move(id, direction) {
   render();
 }
 function reorder(id, targetId, after = false, targetDaypart) {
-  const a = state.plan.activities.find((x) => x.id === id),
-    t = state.plan.activities.find((x) => x.id === targetId);
-  if (!a || (targetId && (!t || id === targetId))) return;
-  const originalDaypart = a.daypart;
-  const daypart = targetDaypart || t.daypart;
-  if (!DAYPARTS.some(([key]) => key === daypart)) return;
-  const list = orderActivities(
-    state.plan.activities.filter((x) => x.daypart === daypart && x.id !== id),
-  );
-  let index = targetId ? list.findIndex((x) => x.id === targetId) : list.length;
-  if (targetId && after) index += 1;
-  if (targetId && index < 0) return;
-  a.daypart = daypart;
-  list.splice(index, 0, a);
-  list.forEach((x, i) => (x.sortOrder = i));
-  if (daypart !== originalDaypart) renumber(originalDaypart);
+  if (
+    !reorderActivities(
+      state.plan.activities,
+      id,
+      targetId,
+      after,
+      targetDaypart,
+    )
+  )
+    return;
   setStatus("Wijzigingen nog niet opgeslagen", true);
   render();
 }

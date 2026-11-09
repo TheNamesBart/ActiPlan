@@ -6,8 +6,14 @@ import {
   dateFromIsoWeek,
   weeksInYear,
   orderActivities,
+  reorderActivities,
   recurrenceLabel,
   deadlineWithinDaypart,
+  createDaypartTimes,
+  formatMinutes,
+  dateKey,
+  parseDate,
+  validDeadline,
 } from "../docs/js/core.js";
 const results = document.querySelector("#results");
 let passed = 0;
@@ -39,7 +45,7 @@ test("dubbele id wordt geweigerd", () =>
   }).some((x) => x.includes("dubbel")));
 test("dagelijkse herhaling", () => occursOn(plan.activities[0], day));
 test("wekelijkse herhaling", () =>
-  occursOn(plan.activities[8], new Date(2024, 1, 28)) &&
+  occursOn(plan.activities[8], new Date(2024, 1, 26)) &&
   !occursOn(plan.activities[8], new Date(2024, 1, 27)));
 test("maanddag 31 werkt in schrikkelmaand", () =>
   occursOn(plan.activities[3], new Date(2024, 1, 29)));
@@ -50,9 +56,68 @@ test("activiteiten zijn op dagdeel en sortOrder geordend", () =>
     { ...plan.activities[1], sortOrder: 2 },
     { ...plan.activities[0], sortOrder: 0 },
   ])[0].daypart === "before_opening");
+test("taak verplaatsen naar ander dagdeel", () => {
+  const activities = [
+    { id: "a", daypart: "morning", sortOrder: 0 },
+    { id: "b", daypart: "morning", sortOrder: 1 },
+    { id: "c", daypart: "afternoon", sortOrder: 0 },
+  ];
+  return (
+    reorderActivities(activities, "a", "c", false, "afternoon") &&
+    activities.find((a) => a.id === "a").daypart === "afternoon" &&
+    activities.filter((a) => a.daypart === "morning").every((a, i) => a.sortOrder === i) &&
+    activities.filter((a) => a.daypart === "afternoon").every((a, i) => a.sortOrder === i)
+  );
+});
+test("taak wordt achter doelactiviteit geplaatst", () => {
+  const activities = [
+    { id: "a", daypart: "morning", sortOrder: 0 },
+    { id: "b", daypart: "morning", sortOrder: 1 },
+    { id: "c", daypart: "morning", sortOrder: 2 },
+  ];
+  reorderActivities(activities, "a", "b", true);
+  return orderActivities(activities).map((a) => a.id).join(",") === "b,a,c";
+});
+test("taak verplaatsen naar leeg dagdeel", () => {
+  const activities = [
+    { id: "a", daypart: "morning", sortOrder: 0 },
+    { id: "b", daypart: "afternoon", sortOrder: 0 },
+  ];
+  return (
+    reorderActivities(activities, "a", null, false, "evening") &&
+    activities.find((a) => a.id === "a").daypart === "evening" &&
+    activities.find((a) => a.id === "a").sortOrder === 0
+  );
+});
+test("dagelijkse herhaling krijgt een label", () =>
+  recurrenceLabel({ type: "daily" }) === "Dagen (alle dagen)");
 test("ISO week start op maandag", () =>
   dateFromIsoWeek(2024, 1).getDay() === 1);
 test("jaar 2020 heeft week 53", () => weeksInYear(2020) === 53);
+test("laatste maandelijkse vrijdag wordt herkend", () =>
+  occursOn(
+    { active: true, recurrence: { type: "monthly", occurrence: "last", weekday: "fri" } },
+    new Date(2026, 10, 27),
+  ) &&
+  !occursOn(
+    { active: true, recurrence: { type: "monthly", occurrence: "last", weekday: "fri" } },
+    new Date(2026, 10, 20),
+  ));
+test("vijfde weekdag valt niet onder vierde week", () =>
+  !occursOn(
+    { active: true, recurrence: { type: "monthly", occurrence: "4", weekday: "mon" } },
+    new Date(2024, 3, 29),
+  ));
+test("deadlinegrenzen worden gecontroleerd", () =>
+  validDeadline("00:00") && validDeadline("23:59") &&
+  !validDeadline("24:00") && !validDeadline("09:60"));
+test("tijdformaat en datumconversie", () =>
+  dateKey(parseDate("2026-11-09")) === "2026-11-09" &&
+  formatMinutes(60) === "1 uur" &&
+  formatMinutes(75) === "1 uur en 15 minuten");
+test("standaardtijden bevatten alle weekdagen en dagdelen", () =>
+  Object.keys(createDaypartTimes()).length === 7 &&
+  Object.values(createDaypartTimes()).every((times) => Object.keys(times).length === 5));
 test("daglijst voorkomt dubbele activiteiten", () =>
   new Set(activitiesForDate(plan.activities, day).map((x) => x.id)).size ===
   activitiesForDate(plan.activities, day).length);
@@ -107,6 +172,14 @@ test("sorteervolgorde is verplicht", () =>
     ...plan,
     activities: [{ ...plan.activities[0], sortOrder: undefined }],
   }).some((x) => x.includes("sortOrder moet")));
+test("dubbele sorteervolgorde wordt geweigerd", () =>
+  validatePlan({
+    ...plan,
+    activities: [
+      plan.activities[0],
+      { ...plan.activities[1], sortOrder: plan.activities[0].sortOrder },
+    ],
+  }).some((x) => x.includes("dezelfde volgorde")));
 test("herhaling is verplicht", () =>
   validatePlan({
     ...plan,

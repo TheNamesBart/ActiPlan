@@ -5,7 +5,14 @@ import {
   dateFromIsoWeek,
   weeksInYear,
   orderActivities,
+  reorderActivities,
   recurrenceLabel,
+  formatMinutes,
+  dateKey,
+  parseDate,
+  validDeadline,
+  createDaypartTimes,
+  deadlineWithinDaypart,
 } from "../docs/js/core.js";
 const plan = samplePlan();
 const checks = [
@@ -29,6 +36,13 @@ const checks = [
     new Set(plan.activities.map((a) => a.daypart)).size === 5 &&
       new Set(plan.activities.map((a) => a.durationMinutes)).size > 1 &&
       plan.activities.some((a) => a.recurrence.type === "monthly") &&
+      new Set(
+        plan.activities
+          .filter((a) => a.recurrence.type === "monthly")
+          .map((a) => `${a.recurrence.occurrence}-${a.recurrence.weekday}`),
+      ).size >= 3 &&
+      plan.metadata.daypartTimes.wed.morning === "08:30–12:30" &&
+      plan.metadata.daypartTimes.sat.before_opening === "06:30–07:30" &&
       plan.activities.some((a) => !a.active) &&
       plan.activities.filter((a) => a.deadline).length >= 4 &&
       plan.activities.some((a) => !a.description),
@@ -43,6 +57,62 @@ const checks = [
     ])[0].daypart === "before_opening",
   ],
   [
+    "verplaatsen naar ander dagdeel",
+    (() => {
+      const activities = [
+        { id: "a", daypart: "morning", sortOrder: 0 },
+        { id: "b", daypart: "morning", sortOrder: 1 },
+        { id: "c", daypart: "afternoon", sortOrder: 0 },
+      ];
+      return (
+        reorderActivities(activities, "a", "c", false, "afternoon") &&
+        activities.find((a) => a.id === "a").daypart === "afternoon" &&
+        activities
+          .filter((a) => a.daypart === "morning")
+          .every((a, i) => a.sortOrder === i) &&
+        activities
+          .filter((a) => a.daypart === "afternoon")
+          .every((a, i) => a.sortOrder === i)
+      );
+    })(),
+  ],
+  [
+    "verplaatsen achter doelactiviteit",
+    (() => {
+      const activities = [
+        { id: "a", daypart: "morning", sortOrder: 0 },
+        { id: "b", daypart: "morning", sortOrder: 1 },
+        { id: "c", daypart: "morning", sortOrder: 2 },
+      ];
+      reorderActivities(activities, "a", "b", true);
+      return orderActivities(activities).map((a) => a.id).join(",") === "b,a,c";
+    })(),
+  ],
+  [
+    "verplaatsen naar leeg dagdeel",
+    (() => {
+      const activities = [
+        { id: "a", daypart: "morning", sortOrder: 0 },
+        { id: "b", daypart: "afternoon", sortOrder: 0 },
+      ];
+      return (
+        reorderActivities(activities, "a", null, false, "evening") &&
+        activities.find((a) => a.id === "a").daypart === "evening" &&
+        activities.find((a) => a.id === "a").sortOrder === 0
+      );
+    })(),
+  ],
+  [
+    "ongeldige verplaatsing wordt genegeerd",
+    (() => {
+      const activities = [{ id: "a", daypart: "morning", sortOrder: 0 }];
+      return (
+        !reorderActivities(activities, "unknown", null, false, "morning") &&
+        activities[0].daypart === "morning"
+      );
+    })(),
+  ],
+  [
     "wekelijkse herhaling wordt duidelijk weergegeven",
     recurrenceLabel({ type: "weekly", weekdays: ["mon", "thu"] }) ===
       "Dagen (maandag, donderdag)",
@@ -52,6 +122,7 @@ const checks = [
     recurrenceLabel({ type: "monthly", occurrence: "2", weekday: "wed" }) ===
       "Maandelijks (tweede Woensdag)",
   ],
+  ["dagelijkse herhaling krijgt een label", recurrenceLabel({ type: "daily" }) === "Dagen (alle dagen)"],
   [
     "tweede woensdag wordt herkend",
     occursOn(
@@ -73,6 +144,33 @@ const checks = [
     ),
   ],
   [
+    "maandelijkse laatste dag wordt herkend",
+    occursOn(
+      {
+        active: true,
+        recurrence: { type: "monthly", occurrence: "last", weekday: "fri" },
+      },
+      new Date(2026, 10, 27),
+    ) &&
+      !occursOn(
+        {
+          active: true,
+          recurrence: { type: "monthly", occurrence: "last", weekday: "fri" },
+        },
+        new Date(2026, 10, 20),
+      ),
+  ],
+  [
+    "maandelijkse vijfde weekdag bestaat niet",
+    !occursOn(
+      {
+        active: true,
+        recurrence: { type: "monthly", occurrence: "4", weekday: "mon" },
+      },
+      new Date(2024, 3, 29),
+    ),
+  ],
+  [
     "deadline wordt toegestaan",
     validatePlan({
       ...plan,
@@ -85,6 +183,26 @@ const checks = [
       ...plan,
       activities: [{ ...plan.activities[0], deadline: "25:00" }],
     }).some((x) => x.includes("deadline")),
+  ],
+  [
+    "deadlinegrenzen worden gecontroleerd",
+    validDeadline("00:00") &&
+      validDeadline("23:59") &&
+      !validDeadline("24:00") &&
+      !validDeadline("09:60"),
+  ],
+  [
+    "tijdformaat en datumconversie",
+    dateKey(parseDate("2026-11-09")) === "2026-11-09" &&
+      formatMinutes(60) === "1 uur" &&
+      formatMinutes(75) === "1 uur en 15 minuten",
+  ],
+  [
+    "standaardtijden bevatten alle weekdagen en dagdelen",
+    Object.keys(createDaypartTimes()).length === 7 &&
+      Object.values(createDaypartTimes()).every(
+        (times) => Object.keys(times).length === 5,
+      ),
   ],
   [
     "korte beschrijving is optioneel",
@@ -136,6 +254,16 @@ const checks = [
     }).some((x) => x.includes("sortOrder moet")),
   ],
   [
+    "dubbele sorteervolgorde wordt geweigerd",
+    validatePlan({
+      ...plan,
+      activities: [
+        plan.activities[0],
+        { ...plan.activities[1], sortOrder: plan.activities[0].sortOrder },
+      ],
+    }).some((x) => x.includes("dezelfde volgorde")),
+  ],
+  [
     "herhaling is verplicht",
     validatePlan({
       ...plan,
@@ -178,6 +306,13 @@ const checks = [
         },
       },
     }).length === 0,
+  ],
+  [
+    "onbekende activiteitseigenschap wordt geweigerd",
+    validatePlan({
+      ...plan,
+      activities: [{ ...plan.activities[0], unexpected: true }],
+    }).some((x) => x.includes("onbekende eigenschap")),
   ],
   [
     "ongeldige openingstijd wordt geweigerd",

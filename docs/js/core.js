@@ -128,6 +128,35 @@ export function orderActivities(activities) {
       a.sortOrder - b.sortOrder,
   );
 }
+export function reorderActivities(
+  activities,
+  id,
+  targetId,
+  after = false,
+  targetDaypart,
+) {
+  const activity = activities.find((x) => x.id === id),
+    target = activities.find((x) => x.id === targetId);
+  if (!activity || (targetId && (!target || id === targetId))) return false;
+  const originalDaypart = activity.daypart,
+    daypart = targetDaypart || target?.daypart;
+  if (!DAYPART_KEYS.has(daypart)) return false;
+  const list = orderActivities(
+    activities.filter((x) => x.daypart === daypart && x.id !== id),
+  );
+  let index = targetId ? list.findIndex((x) => x.id === targetId) : list.length;
+  if (targetId && after) index += 1;
+  if (targetId && index < 0) return false;
+  activity.daypart = daypart;
+  list.splice(index, 0, activity);
+  list.forEach((x, i) => (x.sortOrder = i));
+  if (daypart !== originalDaypart) {
+    orderActivities(
+      activities.filter((x) => x.daypart === originalDaypart),
+    ).forEach((x, i) => (x.sortOrder = i));
+  }
+  return true;
+}
 export function activitiesForDate(activities, date) {
   return orderActivities(activities.filter((a) => occursOn(a, date)));
 }
@@ -329,12 +358,40 @@ export const samplePlan = () => {
     ["Vers fruit spiegelen", "morning", 30, "09:00", "daily", true],
     ["Groenten bijvullen", "morning", 30, null, "daily", true],
     ["Derving registreren", "morning", 15, null, "daily", true],
-    ["Prijskaartjes controleren", "morning", 20, null, "weekly", true],
-    ["Biologische producten controleren", "morning", 25, null, "weekly", true],
+    [
+      "Prijskaartjes controleren",
+      "morning",
+      20,
+      null,
+      { type: "weekly", weekdays: ["mon", "thu"] },
+      true,
+    ],
+    [
+      "Biologische producten controleren",
+      "morning",
+      25,
+      null,
+      { type: "weekly", weekdays: ["tue", "fri"] },
+      true,
+    ],
     ["Bestellijst voor morgen maken", "morning", 30, null, "daily", true],
-    ["Actie-eiland opbouwen", "morning", 45, null, "weekly", true],
+    [
+      "Actie-eiland opbouwen",
+      "morning",
+      45,
+      null,
+      { type: "weekly", weekdays: ["wed", "sat"] },
+      true,
+    ],
     ["Kwaliteitsronde AGF uitvoeren", "afternoon", 30, "13:00", "daily", true],
-    ["Fruit snijden voor proeverij", "afternoon", 30, null, "weekly", true],
+    [
+      "Fruit snijden voor proeverij",
+      "afternoon",
+      30,
+      null,
+      { type: "weekly", weekdays: ["fri", "sat"] },
+      true,
+    ],
     ["Kruiden en kiemgroenten verzorgen", "afternoon", 20, null, "daily", true],
     ["Panklare groenten controleren", "afternoon", 25, null, "daily", true],
     ["Magazijn netjes houden", "afternoon", 30, null, "daily", true],
@@ -347,12 +404,26 @@ export const samplePlan = () => {
       "daily",
       true,
     ],
-    ["Voorraadverschillen noteren", "afternoon", 20, null, "weekly", true],
+    [
+      "Voorraadverschillen noteren",
+      "afternoon",
+      20,
+      null,
+      { type: "weekly", weekdays: ["mon", "wed", "fri"] },
+      true,
+    ],
     ["Avondaanvulling uitvoeren", "evening", 45, "18:00", "daily", true],
     ["Fruit en groenten roteren", "evening", 30, null, "daily", true],
     ["Beschadigde producten verwijderen", "evening", 20, null, "daily", true],
     ["Koeling opnieuw spiegelen", "evening", 30, null, "daily", true],
-    ["Actiepresentatie bijwerken", "evening", 25, null, "weekly", true],
+    [
+      "Actiepresentatie bijwerken",
+      "evening",
+      25,
+      null,
+      { type: "weekly", weekdays: ["thu", "sat"] },
+      true,
+    ],
     ["Overdracht aan sluitdienst maken", "evening", 15, null, "daily", true],
     ["Laatste kwaliteitscontrole", "after_closing", 20, null, "daily", true],
     ["Koelcel afsluiten", "after_closing", 15, null, "daily", true],
@@ -373,14 +444,28 @@ export const samplePlan = () => {
       true,
     ],
     ["AGF-afdeling afsluiten", "after_closing", 15, "21:30", "daily", true],
-    ["Weekvoorraad tellen", "after_closing", 45, null, "weekly", true],
-    ["Bestelhoeveelheden evalueren", "after_closing", 30, null, "weekly", true],
+    [
+      "Weekvoorraad tellen",
+      "after_closing",
+      45,
+      null,
+      { type: "weekly", weekdays: ["sat"] },
+      true,
+    ],
+    [
+      "Bestelhoeveelheden evalueren",
+      "after_closing",
+      30,
+      null,
+      { type: "weekly", weekdays: ["mon", "thu"] },
+      true,
+    ],
     [
       "Maandelijkse derving analyseren",
       "after_closing",
       60,
       null,
-      "monthly",
+      { type: "monthly", occurrence: "last", weekday: "fri" },
       true,
     ],
     [
@@ -388,12 +473,26 @@ export const samplePlan = () => {
       "before_opening",
       30,
       null,
-      "monthly",
+      { type: "monthly", occurrence: "1", weekday: "tue" },
       true,
     ],
-    ["Seizoenspresentatie voorbereiden", "morning", 45, null, "weekly", false],
+    [
+      "Seizoenspresentatie voorbereiden",
+      "morning",
+      45,
+      null,
+      { type: "weekly", weekdays: ["sat"] },
+      false,
+    ],
     ["Dagstart met AGF-team", "before_opening", 15, null, "daily", true],
-    ["Promotiemateriaal ophangen", "morning", 20, null, "monthly", true],
+    [
+      "Promotiemateriaal ophangen",
+      "morning",
+      20,
+      null,
+      { type: "monthly", occurrence: "2", weekday: "wed" },
+      true,
+    ],
     ["Buitenpresentatie nalopen", "afternoon", 20, null, "daily", true],
     ["Afsluitcontrole emballage", "after_closing", 15, null, "daily", true],
   ];
@@ -403,14 +502,10 @@ export const samplePlan = () => {
       const sortOrder = daypartOrders.get(daypart);
       daypartOrders.set(daypart, sortOrder + 1);
       const recurrenceValue =
-        recurrence === "weekly"
-          ? { type: "weekly", weekdays: ["mon", "wed", "fri"] }
-          : recurrence === "monthly"
-            ? {
-                type: "monthly",
-                occurrence: index % 2 === 0 ? "2" : "last",
-                weekday: index % 2 === 0 ? "wed" : "fri",
-              }
+        typeof recurrence === "object"
+          ? recurrence
+          : recurrence === "weekly"
+            ? { type: "weekly", weekdays: ["mon", "wed", "fri"] }
             : { type: "daily" };
       return {
         id: `example-${String(index + 1).padStart(3, "0")}`,
@@ -435,13 +530,26 @@ export const samplePlan = () => {
       };
     },
   );
+  const daypartTimes = createDaypartTimes();
   return {
     format: "actiplan",
     schemaVersion: 1,
     metadata: {
       title: "Voorbeeldplanning AGF-afdeling",
       department: "Supermarkt De Groene Hoek",
-      daypartTimes: createDaypartTimes(),
+      daypartTimes: {
+        ...daypartTimes,
+        wed: {
+          ...daypartTimes.wed,
+          morning: "08:30–12:30",
+          afternoon: "12:30–18:30",
+        },
+        sat: {
+          ...daypartTimes.sat,
+          before_opening: "06:30–07:30",
+          evening: "17:00–20:00",
+        },
+      },
       handbookIntro: [...DEFAULT_HANDBOOK_INTRO],
     },
     activities,
