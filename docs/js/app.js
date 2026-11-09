@@ -19,6 +19,22 @@ import {
 import { $, esc } from "./ui.js";
 import { confirmDialog, promptDialog } from "./dialogs.js?v=4";
 const today = dateKey(new Date());
+const DEFAULT_FILTERS = Object.freeze({
+  q: "",
+  day: "",
+  active: "",
+  recurrence: "",
+});
+const PRINT_PAGE_ACTIVITY_LIMIT = 21;
+const CAPACITY_WARNING_PERCENTAGE = 75;
+const CAPACITY_OVERLOAD_PERCENTAGE = 100;
+const DEFAULT_DEADLINE_DAY = "mon";
+const PRINT_DATE_FORMATTER = new Intl.DateTimeFormat("nl-NL", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
 const state = {
   plan: null,
   status: "Geen planning geopend",
@@ -29,10 +45,12 @@ const state = {
   mode: "week",
   weekYear: isoWeek(new Date()).year,
   week: isoWeek(new Date()).week,
-  filters: { q: "", day: "", active: "", recurrence: "" },
+  filters: { ...DEFAULT_FILTERS },
 };
 const RECOVERY_KEY = "actiplan-recovery-v1";
 const timeValue = (plan, day, key) => plan.metadata.daypartTimes[day][key];
+const capitalize = (value) => value.charAt(0).toUpperCase() + value.slice(1);
+const printDate = (date) => capitalize(PRINT_DATE_FORMATTER.format(date));
 const daypartTimeMap = (plan) =>
   Object.fromEntries(
     WEEKDAYS.map(([day]) => [
@@ -136,7 +154,8 @@ function groups(items, print = false, day, continuation = false) {
   return out || `<p class="empty">Geen activiteiten gepland.</p>`;
 }
 function activityCard(a, print = false) {
-  return `<article class="activity-card ${a.active ? "" : "inactive"}">${print ? '<span class="check">☐</span>' : ""}<div class="activity-content"><div class="activity-title">${a.deadline ? `<span class="deadline${print ? " print-deadline" : ""}" aria-label="Uiterlijk om ${esc(a.deadline)}">◷ ${esc(a.deadline)}</span>` : ""}<h4>${esc(a.name)}</h4></div>${a.description ? `<p>${esc(a.description)}</p>` : ""}${!print ? `<small class="activity-meta"><span class="meta-item" title="Herhaling">↻ ${esc(recurrenceLabel(a.recurrence))}</span>${a.durationMinutes ? `<span class="meta-item" title="Indicatie uitvoeringsduur">◷ Indicatie ${formatMinutes(a.durationMinutes)}</span>` : ""}${a.workInstruction?.trim() ? '<span class="meta-item instruction-meta" title="Werkinstructie beschikbaar">✦ Werkinstructie</span>' : ""}</small>` : ""}${print ? '<div class="signature"><strong>Uitgevoerd door:</strong></div>' : ""}</div></article>`;
+  const hasDescription = Boolean(a.description?.trim());
+  return `<article class="activity-card ${a.active ? "" : "inactive"}${print && !hasDescription ? " no-description" : ""}">${print ? '<span class="check">☐</span>' : ""}<div class="activity-content"><div class="activity-title">${a.deadline ? `<span class="deadline${print ? " print-deadline" : ""}" aria-label="Uiterlijk om ${esc(a.deadline)}">◷ ${esc(a.deadline)}</span>` : ""}<h4>${esc(a.name)}</h4></div>${hasDescription ? `<p>${esc(a.description)}</p>` : ""}${!print ? `<small class="activity-meta"><span class="meta-item" title="Herhaling">↻ ${esc(recurrenceLabel(a.recurrence))}</span>${a.durationMinutes ? `<span class="meta-item" title="Indicatie uitvoeringsduur">◷ Indicatie ${formatMinutes(a.durationMinutes)}</span>` : ""}${a.workInstruction?.trim() ? '<span class="meta-item instruction-meta" title="Werkinstructie beschikbaar">✦ Werkinstructie</span>' : ""}</small>` : ""}${print ? '<div class="signature"><strong>Uitgevoerd door:</strong></div>' : ""}</div></article>`;
 }
 function render() {
   const main = $("#main");
@@ -187,9 +206,9 @@ function home() {
           (summary.duration / summary.capacity) * 100,
         ),
         status =
-          percentage > 100
+          percentage > CAPACITY_OVERLOAD_PERCENTAGE
             ? "is-over"
-            : percentage > 75
+            : percentage > CAPACITY_WARNING_PERCENTAGE
               ? "is-warning"
               : "is-ok";
       return `<div class="daily-summary"><span>${WEEKDAYS[index][1].slice(0, 2)}</span><strong>${summary.count}</strong><small>${formatMinutes(summary.duration)}</small><progress class="daily-load-track ${status}" aria-label="Geschatte taakduur ${WEEKDAYS[index][1]}" value="${summary.duration}" max="${summary.capacity}"></progress></div>`;
@@ -199,7 +218,6 @@ function home() {
     )}</div></section><a class="button primary large" href="#print">Planning bekijken en printen</a></section>`;
 }
 function printPage() {
-  const printPageActivityLimit = 21;
   const date = parseDate(state.date),
     week =
       state.mode === "week"
@@ -209,20 +227,15 @@ function printPage() {
         : [date],
     dayPages = week.map((d) => {
       const items = activitiesForDate(state.plan.activities, d),
-        title = new Intl.DateTimeFormat("nl-NL", {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        }).format(d),
+        title = printDate(d),
         day = WEEKDAYS[(d.getDay() + 6) % 7][0],
-        rest = items.slice(printPageActivityLimit),
+        rest = items.slice(PRINT_PAGE_ACTIVITY_LIMIT),
         pages = [
           {
             title,
             label: title,
             day,
-            items: items.slice(0, printPageActivityLimit),
+            items: items.slice(0, PRINT_PAGE_ACTIVITY_LIMIT),
             long: rest.length > 0,
           },
         ];
@@ -317,13 +330,17 @@ function capacitySummary(all, key, day) {
             occurrence,
           weekdayLabel =
             WEEKDAYS.find(([key]) => key === weekday)?.[1] || weekday;
-        return `<div class="capacity-monthly-row"><span>+${duration} min</span><strong>${occurrenceLabel} ${weekdayLabel}</strong></div>`;
+        return `<div class="capacity-monthly-row"><span>+${duration} min</span><strong>op elke ${occurrenceLabel} ${weekdayLabel}</strong></div>`;
       })
       .join(""),
     percentage = Math.round((fixed / available) * 100),
     status =
-      percentage > 100 ? "is-over" : percentage > 75 ? "is-warning" : "is-ok";
-  return `<div class="capacity-summary"><div class="capacity-main"><div class="capacity-label"><span>Belasting <button type="button" class="capacity-info" aria-expanded="false" aria-label="Uitleg capaciteitsbalk">ⓘ</button><span class="capacity-info-text" hidden>De balk gaat uit van één collega die het volledige dagdeel beschikbaar is. Pauzes zijn niet meegerekend.</span></span><strong>${fixed} / ${available} min · ${percentage}%</strong></div><progress class="capacity-track ${status}" aria-label="Belasting" value="${fixed}" max="${available}"></progress>${percentage > 100 ? `<small class="capacity-warning">Dit dagdeel is ${fixed - available} minuten overvol gepland.</small>` : ""}</div>${monthlyRows ? `<div class="capacity-monthly"><span>Extra belasting door maandelijkse activiteiten</span>${monthlyRows}</div>` : ""}</div>`;
+      percentage > CAPACITY_OVERLOAD_PERCENTAGE
+        ? "is-over"
+        : percentage > CAPACITY_WARNING_PERCENTAGE
+          ? "is-warning"
+          : "is-ok";
+  return `<div class="capacity-summary"><div class="capacity-main"><div class="capacity-label"><span>Belasting (op basis van een collega, pauze niet meegerekend)</span><strong>${fixed} / ${available} min · ${percentage}%</strong></div><progress class="capacity-track ${status}" aria-label="Belasting (op basis van een collega, pauze niet meegerekend)" value="${fixed}" max="${available}"></progress>${percentage > CAPACITY_OVERLOAD_PERCENTAGE ? `<small class="capacity-warning">Dit dagdeel is ${fixed - available} minuten overvol gepland.</small>` : ""}</div>${monthlyRows ? `<div class="capacity-monthly"><span>Extra belasting door maandelijkse activiteiten</span>${monthlyRows}</div>` : ""}</div>`;
 }
 function manage() {
   const all = state.plan.activities,
@@ -350,7 +367,7 @@ function manage() {
     );
   return `<section><div class="page-heading"><div><p class="eyebrow">Aan de slag</p><h1>Planning bewerken</h1></div><button class="button primary" id="add-activity">Activiteit toevoegen</button></div><div class="toolbar filters${restricted ? " has-filter-warning" : ""}"><label>Zoeken<input id="filter-q" value="${esc(state.filters.q)}" placeholder="Naam of beschrijving"></label><label class="day-filter-label"><span>Dag <button type="button" class="filter-info" aria-expanded="false" aria-label="Uitleg geplande tijd">ⓘ</button><span class="filter-info-text" hidden>Selecteer een dag voor meer inzicht in de geplande tijd per dagdeel.</span></span><select id="filter-day"><option value="">Alle dagen</option>${WEEKDAYS.map((x) => `<option value="${x[0]}" ${state.filters.day === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Herhaling<select id="filter-recurrence"><option value="">Alle herhalingen</option><option value="daily" ${state.filters.recurrence === "daily" ? "selected" : ""}>Dagelijks</option><option value="weekly" ${state.filters.recurrence === "weekly" ? "selected" : ""}>Wekelijks</option><option value="monthly" ${state.filters.recurrence === "monthly" ? "selected" : ""}>Maandelijks</option></select></label><label>Status<select id="filter-active"><option value="">Alle</option><option value="true" ${state.filters.active === "true" ? "selected" : ""}>Actief</option><option value="false" ${state.filters.active === "false" ? "selected" : ""}>Inactief</option></select></label>${hasFilters ? '<button type="button" class="button small" id="clear-filters">Filters wissen</button>' : ""}${restricted ? '    <p class="manage-restricted"><span class="message-label">Let op:</span> <span>Verslepen is uitgeschakeld zolang er filters actief zijn.</span></p>' : ""}</div><div class="manage-list">${DAYPARTS.map(
     ([key, label]) =>
-      `<section class="manage-group"><h2>${label} <small>(${timeValue(state.plan, state.filters.day || "mon", key)})</small></h2>${capacitySummary(all, key, state.filters.day)}<div data-dropzone="${key}">${
+      `<section class="manage-group"><h2>${label} <small>(${timeValue(state.plan, state.filters.day || DEFAULT_DEADLINE_DAY, key)})</small></h2>${capacitySummary(all, key, state.filters.day)}<div data-dropzone="${key}">${
         filtered
           .filter((a) => a.daypart === key)
           .map((a) => manageCard(a, restricted))
@@ -409,7 +426,12 @@ function handbook(print) {
       new Date(),
     ),
     intro = handbookIntro();
-  return `<section><div class="page-heading"><div><p class="eyebrow">Handige info</p><h1>Werkinstructies${print ? " printen" : " bekijken"}</h1></div><div class="handbook-actions">${print ? '<button class="button primary" id="print-button">Printen</button>' : ""}<button type="button" class="icon-button handbook-edit" id="edit-handbook-intro" title="Inleiding aanpassen" aria-label="Inleiding aanpassen">✎</button></div></div>${!print ? `<div class="toolbar"><label>Zoeken<input id="handbook-q" placeholder="Activiteit of instructie"></label></div>` : ""}<div class="handbook">${print ? `<article class="handbook-cover"><p class="eyebrow">Werkinstructies</p><h2>${esc(state.plan.metadata.title)}</h2>${intro.map((paragraph) => `<p>${esc(paragraph)}</p>`).join("")}<p class="handbook-date">Geprint op ${printedOn}</p></article>` : ""}${list.map((a) => `<article class="handbook-entry"><h2>${esc(a.name)}</h2>${a.deadline ? `<p class="deadline handbook-deadline">Uiterlijk om ${esc(a.deadline)}</p>` : ""}${a.description ? `<p><strong>Korte beschrijving</strong>${esc(a.description)}</p>` : ""}<p><strong>Werkinstructie</strong>${esc(a.workInstruction)}</p>${a.durationMinutes ? `<strong>Indicatie uitvoeringsduur: ${formatMinutes(a.durationMinutes)}</strong>` : ""}${!print ? `<button class="button small edit" data-id="${a.id}">Bewerken</button>` : ""}</article>`).join("") || '<p class="empty">Er zijn nog geen werkinstructies.</p>'}</div></section>`;
+  const editButton =
+      '<button type="button" class="icon-button handbook-edit" id="edit-handbook-intro" title="Inleiding aanpassen" aria-label="Inleiding aanpassen">✎</button>',
+    actions = print
+      ? `${editButton}<button class="button primary" id="print-button">Printen</button>`
+      : editButton;
+  return `<section><div class="page-heading"><div><p class="eyebrow">Handige info</p><h1>Werkinstructies${print ? " printen" : " bekijken"}</h1></div><div class="handbook-actions">${actions}</div></div>${!print ? `<div class="toolbar"><label>Zoeken<input id="handbook-q" placeholder="Activiteit of instructie"></label></div>` : ""}<div class="handbook">${print ? `<article class="handbook-cover"><p class="eyebrow">Werkinstructies</p><h2>${esc(state.plan.metadata.title)}</h2>${intro.map((paragraph) => `<p>${esc(paragraph)}</p>`).join("")}<p class="handbook-date">Geprint op ${printedOn}</p></article>` : ""}${list.map((a) => `<article class="handbook-entry"><h2>${esc(a.name)}</h2>${a.deadline ? `<p class="deadline handbook-deadline">Uiterlijk om ${esc(a.deadline)}</p>` : ""}${a.description ? `<p><strong>Korte beschrijving</strong>${esc(a.description)}</p>` : ""}<p><strong>Werkinstructie</strong>${esc(a.workInstruction)}</p>${a.durationMinutes ? `<strong>Indicatie uitvoeringsduur: ${formatMinutes(a.durationMinutes)}</strong>` : ""}${!print ? `<button class="button small edit" data-id="${a.id}">Bewerken</button>` : ""}</article>`).join("") || '<p class="empty">Er zijn nog geen werkinstructies.</p>'}</div></section>`;
 }
 function editOpeningTimes() {
   const dialog = document.createElement("dialog");
@@ -526,7 +548,7 @@ function bindPage() {
   });
   $("#add-activity")?.addEventListener("click", () => showForm());
   $("#clear-filters")?.addEventListener("click", () => {
-    state.filters = { q: "", day: "", active: "", recurrence: "" };
+    state.filters = { ...DEFAULT_FILTERS };
     render();
   });
   ["filter-q", "filter-day", "filter-recurrence", "filter-active"].forEach(
@@ -697,7 +719,7 @@ function showForm(existing) {
     deadline = f.elements.deadline,
     daypart = f.elements.daypart,
     warning = d.querySelector(".deadline-warning"),
-    configuredDay = state.filters.day || "mon",
+    configuredDay = state.filters.day || DEFAULT_DEADLINE_DAY,
     rangeForDaypart = () => timeValue(state.plan, configuredDay, daypart.value),
     deadlineInRange = () => {
       if (!deadline.value) return true;
@@ -870,7 +892,7 @@ async function returnToStart() {
   location.hash = "#home";
   navigate();
 }
-function loadPlan(plan, status = "Geen wijzigingen", page = "#print") {
+function loadPlan(plan, status = "Geen wijzigingen", page = "#manage") {
   const errors = validatePlan(plan);
   if (errors.length) {
     toast(`Planning niet geladen: ${errors[0]}`, true);
@@ -912,7 +934,8 @@ $("#new-plan").onclick = async () => {
     "#manage",
   );
 };
-$("#sample-plan").onclick = () => loadPlan(samplePlan(), "Geen wijzigingen");
+$("#sample-plan").onclick = () =>
+  loadPlan(samplePlan(), "Geen wijzigingen", "#manage");
 $("#save-plan").onclick = async () => {
   if (!state.plan) return;
   const now = new Date(),
