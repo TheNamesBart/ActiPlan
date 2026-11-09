@@ -440,6 +440,21 @@ dialog form > .weekly-fields label {
   display: block;
 }
 
+dialog form > .weekly-fields .select-all-days {
+  grid-column: 1 / -1;
+  justify-content: center;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #b9d9c7;
+  border-radius: 5px;
+  background: #f3faf6;
+  color: #126b45;
+  font-weight: bold;
+}
+
+dialog form > .weekly-fields .select-all-days input {
+  accent-color: var(--green);
+}
+
 dialog form > .monthly-fields .field-label,
 dialog form > .weekly-fields .field-label {
   display: block;

@@ -58,7 +58,7 @@ test("daglijst voorkomt dubbele activiteiten", () =>
   activitiesForDate(plan.activities, day).length);
 test("wekelijkse herhaling krijgt een leesbaar label", () =>
   recurrenceLabel({ type: "weekly", weekdays: ["mon", "thu"] }) ===
-  "Wekelijks (Maandag, Donderdag)");
+  "Dagen (maandag, donderdag)");
 test("maandelijkse herhaling krijgt een leesbaar label", () =>
   recurrenceLabel({ type: "monthly", occurrence: "2", weekday: "wed" }) ===
   "Maandelijks (tweede Woensdag)");

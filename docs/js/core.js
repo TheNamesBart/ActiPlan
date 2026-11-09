@@ -43,9 +43,9 @@ export const createDaypartTimes = () =>
   );
 export const recurrenceLabel = (recurrence) =>
   recurrence.type === "daily"
-    ? "Dagelijks"
+    ? "Dagen (alle dagen)"
     : recurrence.type === "weekly"
-      ? `Wekelijks (${recurrence.weekdays.map((day) => WEEKDAYS.find(([key]) => key === day)?.[1]).join(", ")})`
+      ? `Dagen (${recurrence.weekdays.map((day) => WEEKDAYS.find(([key]) => key === day)?.[1].toLowerCase()).join(", ")})`
       : `Maandelijks (${MONTHLY_OCCURRENCES.find(([key]) => key === String(recurrence.occurrence))?.[1] || "onbekend"} ${WEEKDAYS.find(([key]) => key === recurrence.weekday)?.[1] || "onbekende dag"})`;
 const DAYPART_KEYS = new Set(DAYPARTS.map((x) => x[0]));
 const WEEKDAY_KEYS = new Set(WEEKDAYS.map((x) => x[0]));

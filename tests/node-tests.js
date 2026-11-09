@@ -45,7 +45,7 @@ const checks = [
   [
     "wekelijkse herhaling wordt duidelijk weergegeven",
     recurrenceLabel({ type: "weekly", weekdays: ["mon", "thu"] }) ===
-      "Wekelijks (Maandag, Donderdag)",
+      "Dagen (maandag, donderdag)",
   ],
   [
     "maandelijkse herhaling wordt duidelijk weergegeven",
