@@ -983,6 +983,11 @@ dialog label {
   letter-spacing: 0.01em;
   margin-left: 0.25rem;
 }
+.manage-group h2 .manage-time-exception {
+  color: #70520e;
+  font-size: 0.62rem;
+  font-weight: 600;
+}
 .daypart h4 small {
   font-size: 0.68rem;
   font-weight: normal;

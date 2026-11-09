@@ -60,6 +60,12 @@ const daypartTimeMap = (plan) =>
       ),
     ]),
   );
+const afwijkendeDagenVoorDagdeel = (plan, key) =>
+  WEEKDAYS.filter(
+    ([day]) =>
+      day !== DEFAULT_DEADLINE_DAY &&
+      timeValue(plan, day, key) !== timeValue(plan, DEFAULT_DEADLINE_DAY, key),
+  ).map(([, label]) => label.toLowerCase());
 const timeToMinutes = (value) => {
   const [hours, minutes] = value.split(":").map(Number);
   return hours * 60 + minutes;
@@ -367,7 +373,7 @@ function manage() {
     );
   return `<section><div class="page-heading"><div><p class="eyebrow">Aan de slag</p><h1>Planning bewerken</h1></div><button class="button primary" id="add-activity">Activiteit toevoegen</button></div><div class="toolbar filters${restricted ? " has-filter-warning" : ""}"><label>Zoeken<input id="filter-q" value="${esc(state.filters.q)}" placeholder="Naam of beschrijving"></label><label class="day-filter-label"><span>Dag <button type="button" class="filter-info" aria-expanded="false" aria-label="Uitleg geplande tijd">ⓘ</button><span class="filter-info-text" hidden>Selecteer een dag voor meer inzicht in de geplande tijd per dagdeel.</span></span><select id="filter-day"><option value="">Alle dagen</option>${WEEKDAYS.map((x) => `<option value="${x[0]}" ${state.filters.day === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Herhaling<select id="filter-recurrence"><option value="">Alle herhalingen</option><option value="daily" ${state.filters.recurrence === "daily" ? "selected" : ""}>Dagelijks</option><option value="weekly" ${state.filters.recurrence === "weekly" ? "selected" : ""}>Wekelijks</option><option value="monthly" ${state.filters.recurrence === "monthly" ? "selected" : ""}>Maandelijks</option></select></label><label>Status<select id="filter-active"><option value="">Alle</option><option value="true" ${state.filters.active === "true" ? "selected" : ""}>Actief</option><option value="false" ${state.filters.active === "false" ? "selected" : ""}>Inactief</option></select></label>${hasFilters ? '<button type="button" class="button small" id="clear-filters">Filters wissen</button>' : ""}${restricted ? '    <p class="manage-restricted"><span class="message-label">Let op:</span> <span>Verslepen is uitgeschakeld zolang er filters actief zijn.</span></p>' : ""}</div><div class="manage-list">${DAYPARTS.map(
     ([key, label]) =>
-      `<section class="manage-group"><h2>${label} <small>(${timeValue(state.plan, state.filters.day || DEFAULT_DEADLINE_DAY, key)})</small></h2>${capacitySummary(all, key, state.filters.day)}<div data-dropzone="${key}">${
+      `<section class="manage-group"><h2>${label} <small>(${timeValue(state.plan, state.filters.day || DEFAULT_DEADLINE_DAY, key)})</small>${!state.filters.day && afwijkendeDagenVoorDagdeel(state.plan, key).length ? `<small class="manage-time-exception">Tijden wijken af op: ${esc(afwijkendeDagenVoorDagdeel(state.plan, key).join(", "))}</small>` : ""}</h2>${capacitySummary(all, key, state.filters.day)}<div data-dropzone="${key}">${
         filtered
           .filter((a) => a.daypart === key)
           .map((a) => manageCard(a, restricted))
