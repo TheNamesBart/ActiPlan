@@ -144,6 +144,8 @@ test("deadlinegrenzen worden gecontroleerd", () =>
   !validDeadline("24:00") && !validDeadline("09:60"));
 test("tijdformaat en datumconversie", () =>
   dateKey(parseDate("2026-11-09")) === "2026-11-09" &&
+  formatMinutes(0) === "0 minuten" &&
+  formatMinutes(1) === "1 minuut" &&
   formatMinutes(60) === "1 uur" &&
   formatMinutes(75) === "1 uur en 15 minuten");
 test("standaardtijden bevatten alle weekdagen en dagdelen", () =>
@@ -172,6 +174,11 @@ test("korte beschrijving is optioneel", () =>
   validatePlan({
     ...plan,
     activities: [{ ...plan.activities[0], description: "" }],
+  }).length === 0);
+test("nul minuten is toegestaan", () =>
+  validatePlan({
+    ...plan,
+    activities: [{ ...plan.activities[0], durationMinutes: 0 }],
   }).length === 0);
 test("uitvoeringsduur is verplicht", () =>
   validatePlan({

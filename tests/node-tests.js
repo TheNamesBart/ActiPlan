@@ -228,6 +228,8 @@ const checks = [
   [
     "tijdformaat en datumconversie",
     dateKey(parseDate("2026-11-09")) === "2026-11-09" &&
+      formatMinutes(0) === "0 minuten" &&
+      formatMinutes(1) === "1 minuut" &&
       formatMinutes(60) === "1 uur" &&
       formatMinutes(75) === "1 uur en 15 minuten",
   ],
@@ -243,6 +245,13 @@ const checks = [
     validatePlan({
       ...plan,
       activities: [{ ...plan.activities[0], description: "" }],
+    }).length === 0,
+  ],
+  [
+    "nul minuten is toegestaan",
+    validatePlan({
+      ...plan,
+      activities: [{ ...plan.activities[0], durationMinutes: 0 }],
     }).length === 0,
   ],
   [

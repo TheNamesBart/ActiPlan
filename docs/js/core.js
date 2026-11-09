@@ -64,8 +64,8 @@ export const formatMinutes = (n) =>
   n == null
     ? ""
     : n < 60
-      ? `${n} minuten`
-      : `${Math.floor(n / 60)} uur${n % 60 ? ` en ${n % 60} minuten` : ""}`;
+      ? `${n} ${n === 1 ? "minuut" : "minuten"}`
+      : `${Math.floor(n / 60)} uur${n % 60 ? ` en ${n % 60} ${n % 60 === 1 ? "minuut" : "minuten"}` : ""}`;
 export const validDeadline = (value) =>
   value === undefined ||
   value === null ||
@@ -281,8 +281,8 @@ export function validatePlan(plan) {
       typeof a.workInstruction !== "string"
     )
       errors.push(`${p}: workInstruction moet tekst zijn.`);
-    if (!Number.isInteger(a.durationMinutes) || a.durationMinutes <= 0)
-      errors.push(`${p}: durationMinutes moet een positief geheel getal zijn.`);
+    if (!Number.isInteger(a.durationMinutes) || a.durationMinutes < 0)
+      errors.push(`${p}: durationMinutes moet een niet-negatief geheel getal zijn.`);
     if (!validDeadline(a.deadline))
       errors.push(`${p}: deadline moet een tijdstip in UU:MM zijn.`);
     if (!DAYPART_KEYS.has(a.daypart)) errors.push(`${p}: ongeldig dagdeel.`);
