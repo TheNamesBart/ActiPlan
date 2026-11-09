@@ -33,6 +33,7 @@ const state = {
 };
 const RECOVERY_KEY = "actiplan-recovery-v1";
 const timeValue = (plan, day, key) => plan.metadata.daypartTimes[day][key];
+const capitalize = (value) => value.charAt(0).toUpperCase() + value.slice(1);
 const daypartTimeMap = (plan) =>
   Object.fromEntries(
     WEEKDAYS.map(([day]) => [
@@ -209,12 +210,14 @@ function printPage() {
         : [date],
     dayPages = week.map((d) => {
       const items = activitiesForDate(state.plan.activities, d),
-        title = new Intl.DateTimeFormat("nl-NL", {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-        }).format(d),
+        title = capitalize(
+          new Intl.DateTimeFormat("nl-NL", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }).format(d),
+        ),
         day = WEEKDAYS[(d.getDay() + 6) % 7][0],
         rest = items.slice(printPageActivityLimit),
         pages = [
@@ -317,13 +320,13 @@ function capacitySummary(all, key, day) {
             occurrence,
           weekdayLabel =
             WEEKDAYS.find(([key]) => key === weekday)?.[1] || weekday;
-        return `<div class="capacity-monthly-row"><span>+${duration} min</span><strong>${occurrenceLabel} ${weekdayLabel}</strong></div>`;
+        return `<div class="capacity-monthly-row"><span>+${duration} min</span><strong>op elke ${occurrenceLabel} ${weekdayLabel}</strong></div>`;
       })
       .join(""),
     percentage = Math.round((fixed / available) * 100),
     status =
       percentage > 100 ? "is-over" : percentage > 75 ? "is-warning" : "is-ok";
-  return `<div class="capacity-summary"><div class="capacity-main"><div class="capacity-label"><span>Belasting <button type="button" class="capacity-info" aria-expanded="false" aria-label="Uitleg capaciteitsbalk">ⓘ</button><span class="capacity-info-text" hidden>De balk gaat uit van één collega die het volledige dagdeel beschikbaar is. Pauzes zijn niet meegerekend.</span></span><strong>${fixed} / ${available} min · ${percentage}%</strong></div><progress class="capacity-track ${status}" aria-label="Belasting" value="${fixed}" max="${available}"></progress>${percentage > 100 ? `<small class="capacity-warning">Dit dagdeel is ${fixed - available} minuten overvol gepland.</small>` : ""}</div>${monthlyRows ? `<div class="capacity-monthly"><span>Extra belasting door maandelijkse activiteiten</span>${monthlyRows}</div>` : ""}</div>`;
+  return `<div class="capacity-summary"><div class="capacity-main"><div class="capacity-label"><span>Belasting (op basis van een collega, pauze niet meegerekend)</span><strong>${fixed} / ${available} min · ${percentage}%</strong></div><progress class="capacity-track ${status}" aria-label="Belasting (op basis van een collega, pauze niet meegerekend)" value="${fixed}" max="${available}"></progress>${percentage > 100 ? `<small class="capacity-warning">Dit dagdeel is ${fixed - available} minuten overvol gepland.</small>` : ""}</div>${monthlyRows ? `<div class="capacity-monthly"><span>Extra belasting door maandelijkse activiteiten</span>${monthlyRows}</div>` : ""}</div>`;
 }
 function manage() {
   const all = state.plan.activities,
@@ -870,7 +873,7 @@ async function returnToStart() {
   location.hash = "#home";
   navigate();
 }
-function loadPlan(plan, status = "Geen wijzigingen", page = "#print") {
+function loadPlan(plan, status = "Geen wijzigingen", page = "#manage") {
   const errors = validatePlan(plan);
   if (errors.length) {
     toast(`Planning niet geladen: ${errors[0]}`, true);
@@ -912,7 +915,8 @@ $("#new-plan").onclick = async () => {
     "#manage",
   );
 };
-$("#sample-plan").onclick = () => loadPlan(samplePlan(), "Geen wijzigingen");
+$("#sample-plan").onclick = () =>
+  loadPlan(samplePlan(), "Geen wijzigingen", "#manage");
 $("#save-plan").onclick = async () => {
   if (!state.plan) return;
   const now = new Date(),
