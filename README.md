@@ -12,7 +12,7 @@ Een gevibecode website voor het maken van activiteitenplanningen. De planning st
 - `docs/js/ui.js` - gedeelde UI-hulpfuncties.
 - `docs/js/dialogs.js` - consistente bevestigings- en invoerdialogen.
 - `tests/` - zelfstandige browser-tests zonder externe bibliotheken.
-- `docs/manifest.json` - basisinstellingen voor statische hosting.
+- `docs/manifest.json` - basisinstellingen voor statische hosting.test
 
 ## Gebruiken en testen
 
