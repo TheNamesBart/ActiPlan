@@ -616,6 +616,13 @@ dialog {
   max-width: 560px;
   width: calc(100% - 2rem);
 }
+#activity-dialog {
+  max-height: calc(100vh - 2rem);
+}
+#activity-dialog form {
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
 dialog::backdrop {
   background: #17342a80;
 }
