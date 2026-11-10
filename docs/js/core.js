@@ -272,6 +272,8 @@ export function validatePlan(plan) {
     else ids.add(a.id);
     if (typeof a.active !== "boolean")
       errors.push(`${p}: active moet boolean zijn.`);
+    if (a.loadOnly !== undefined && typeof a.loadOnly !== "boolean")
+      errors.push(`${p}: loadOnly moet boolean zijn.`);
     if (typeof a.name !== "string" || !a.name.trim())
       errors.push(`${p}: name moet een niet-lege tekst zijn.`);
     if (a.description !== undefined && typeof a.description !== "string")
@@ -320,6 +322,7 @@ export function validatePlan(plan) {
     const known = [
       "id",
       "active",
+      "loadOnly",
       "name",
       "description",
       "workInstruction",

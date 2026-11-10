@@ -384,6 +384,17 @@ textarea {
   padding: 0.8rem 0;
   border-bottom: 1px solid #e8eee9;
 }
+.activity-card.other-department,
+.manage-card.other-department {
+  background: #fff9e6;
+}
+.other-department-meta {
+  color: inherit;
+}
+.other-department-meta::before {
+  content: "↗";
+  margin-right: 0.22rem;
+}
 .activity-card:last-child {
   border: 0;
 }
