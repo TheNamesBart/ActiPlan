@@ -161,9 +161,23 @@ function groups(items, print = false, day, continuation = false) {
   }
   return out || `<p class="empty">Geen activiteiten gepland.</p>`;
 }
+function usesMultipleDayparts(activity) {
+  const name = activity.name.trim().toLocaleLowerCase();
+  return new Set(
+    state.plan.activities
+      .filter((candidate) => candidate.name.trim().toLocaleLowerCase() === name)
+      .map((candidate) => candidate.daypart),
+  ).size > 1;
+}
+function daypartLabel(key) {
+  return `Uitvoering: ${(DAYPARTS.find(([daypart]) => daypart === key)?.[1] || key).toLowerCase()}`;
+}
 function activityCard(a, print = false) {
   const hasDescription = Boolean(a.description?.trim());
-  return `<article class="activity-card ${a.active ? "" : "inactive"}${a.loadOnly ? " other-department" : ""}${print && !hasDescription ? " no-description" : ""}">${print ? '<span class="check">☐</span>' : ""}<div class="activity-content"><div class="activity-title">${a.deadline ? `<span class="deadline${print ? " print-deadline" : ""}" aria-label="Uiterlijk om ${esc(a.deadline)}">◷ ${esc(a.deadline)}</span>` : ""}<h4>${esc(a.name)}</h4></div>${hasDescription ? `<p>${esc(a.description)}</p>` : ""}${!print ? `<small class="activity-meta">${a.durationMinutes != null ? `<span class="meta-item" title="Indicatie uitvoeringsduur">◷ Indicatie ${formatMinutes(a.durationMinutes)}</span>` : ""}${a.workInstruction?.trim() ? '<span class="meta-item instruction-meta" title="Werkinstructie beschikbaar">✦ Werkinstructie</span>' : ""}${a.loadOnly ? '<span class="meta-item other-department-meta" title="Activiteit op andere afdeling">Andere afdeling</span>' : ""}</small>` : ""}${print ? '<div class="signature"><strong>Uitgevoerd door:</strong></div>' : ""}</div></article>`;
+  const daypart = !print && usesMultipleDayparts(a)
+    ? `<span class="daypart-label">${esc(daypartLabel(a.daypart))}</span>`
+    : "";
+  return `<article class="activity-card ${a.active ? "" : "inactive"}${a.loadOnly ? " other-department" : ""}${print && !hasDescription ? " no-description" : ""}">${print ? '<span class="check">☐</span>' : ""}<div class="activity-content"><div class="activity-title">${a.deadline ? `<span class="deadline${print ? " print-deadline" : ""}" aria-label="Uiterlijk om ${esc(a.deadline)}">◷ ${esc(a.deadline)}</span>` : ""}<h4>${esc(a.name)}${daypart}</h4></div>${hasDescription ? `<p>${esc(a.description)}</p>` : ""}${!print ? `<small class="activity-meta">${a.durationMinutes != null ? `<span class="meta-item" title="Indicatie uitvoeringsduur">◷ Indicatie ${formatMinutes(a.durationMinutes)}</span>` : ""}${a.workInstruction?.trim() ? '<span class="meta-item instruction-meta" title="Werkinstructie beschikbaar">✦ Werkinstructie</span>' : ""}${a.loadOnly ? '<span class="meta-item other-department-meta" title="Activiteit op andere afdeling">Andere afdeling</span>' : ""}</small>` : ""}${print ? '<div class="signature"><strong>Uitgevoerd door:</strong></div>' : ""}</div></article>`;
 }
 function render() {
   const main = $("#main");
@@ -414,7 +428,10 @@ function manageCard(a, restricted) {
         : a.recurrence.type === "weekly"
           ? a.recurrence.weekdays
           : [a.recurrence.weekday];
-  return `<article class="manage-card ${a.active ? "" : "inactive"}${a.loadOnly ? " other-department" : ""}" draggable="${!restricted}" data-id="${esc(a.id)}"><span class="drag-handle" title="Verslepen om te sorteren" aria-label="Verslepen om te sorteren">⋮⋮</span><div class="manage-info"><strong>${esc(a.name)}</strong><span>${esc(a.description)}</span><small>${a.deadline ? `<span class="deadline" aria-label="Uiterlijk om ${esc(a.deadline)}">◷ ${esc(a.deadline)}</span>` : ""}${a.durationMinutes != null ? `<span class="meta-item" title="Uitvoeringsduur">◷ ${formatMinutes(a.durationMinutes)}</span>` : ""}${instruction ? '<span class="meta-item instruction-meta" title="Werkinstructie beschikbaar" aria-label="Werkinstructie beschikbaar">✦ Werkinstructie</span>' : ""}${a.loadOnly ? '<span class="meta-item other-department-meta" title="Activiteit op andere afdeling">Andere afdeling</span>' : ""}</small></div><div class="manage-days" aria-label="Uitvoeringsdagen">${WEEKDAYS.map(([day, label]) => `<span class="${days.includes(day) ? "is-scheduled" : ""}" title="${days.includes(day) ? `${label}: uitvoeren` : `${label}: niet uitvoeren`}">${days.includes(day) ? "✓" : "–"}</span>`).join("")}${monthlyMeta}</div><div class="manage-actions"><button class="icon-button edit" data-id="${a.id}" title="Bewerken" aria-label="Bewerken">✎</button><button class="icon-button copy" data-id="${a.id}" title="Kopiëren" aria-label="Kopiëren">⧉</button><button class="icon-button delete" data-id="${a.id}" title="Verwijderen" aria-label="Verwijderen">×</button></div></article>`;
+  const daypart = usesMultipleDayparts(a)
+    ? `<span class="daypart-label">${esc(daypartLabel(a.daypart))}</span>`
+    : "";
+  return `<article class="manage-card ${a.active ? "" : "inactive"}${a.loadOnly ? " other-department" : ""}" draggable="${!restricted}" data-id="${esc(a.id)}"><span class="drag-handle" title="Verslepen om te sorteren" aria-label="Verslepen om te sorteren">⋮⋮</span><div class="manage-info"><strong>${esc(a.name)}${daypart}</strong><span>${esc(a.description)}</span><small>${a.deadline ? `<span class="deadline" aria-label="Uiterlijk om ${esc(a.deadline)}">◷ ${esc(a.deadline)}</span>` : ""}${a.durationMinutes != null ? `<span class="meta-item" title="Uitvoeringsduur">◷ ${formatMinutes(a.durationMinutes)}</span>` : ""}${instruction ? '<span class="meta-item instruction-meta" title="Werkinstructie beschikbaar" aria-label="Werkinstructie beschikbaar">✦ Werkinstructie</span>' : ""}${a.loadOnly ? '<span class="meta-item other-department-meta" title="Activiteit op andere afdeling">Andere afdeling</span>' : ""}</small></div><div class="manage-days" aria-label="Uitvoeringsdagen">${WEEKDAYS.map(([day, label]) => `<span class="${days.includes(day) ? "is-scheduled" : ""}" title="${days.includes(day) ? `${label}: uitvoeren` : `${label}: niet uitvoeren`}">${days.includes(day) ? "✓" : "–"}</span>`).join("")}${monthlyMeta}</div><div class="manage-actions"><button class="icon-button edit" data-id="${a.id}" title="Bewerken" aria-label="Bewerken">✎</button><button class="icon-button copy" data-id="${a.id}" title="Kopiëren" aria-label="Kopiëren">⧉</button><button class="icon-button delete" data-id="${a.id}" title="Verwijderen" aria-label="Verwijderen">×</button></div></article>`;
 }
 function form(existing) {
   const a = existing || {
