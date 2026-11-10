@@ -7,8 +7,8 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="manifest.json" />
     <title>ActiPlan</title>
-    <link rel="stylesheet" href="css/styles.css?v=20261110-32" />
-    <link rel="stylesheet" href="css/components.css?v=59" />
+    <link rel="stylesheet" href="css/styles.css?v=20261110-33" />
+    <link rel="stylesheet" href="css/components.css?v=61" />
     <link rel="stylesheet" href="css/print.css?v=55" />
   </head>
   <body>
@@ -28,6 +28,11 @@
             Maak snel een duidelijke activiteitenplanning! Je gegevens blijven
             in deze browser en worden alleen opgeslagen wanneer jij dat wilt.
           </p>
+          <ol class="welcome-steps">
+            <li>Maak een planning voor je afdeling.</li>
+            <li>Voeg activiteiten en werktijden toe.</li>
+            <li>Controleer, sla op en print je planning.</li>
+          </ol>
           <details class="save-tip">
             <summary>
               Let op: vergeet je planning niet op te slaan op je computer
@@ -84,10 +89,13 @@
             >
           </nav>
           <div class="sidebar-actions">
-            <button id="save-plan" class="button primary full">Opslaan</button>
             <button id="change-plan" class="button full">
               Terug naar start
             </button>
+            <button id="save-plan" class="button primary full">Opslaan</button>
+            <p class="sidebar-help">
+              Hiermee download je je planning als bestand op je computer.
+            </p>
           </div>
         </aside>
         <main id="main" tabindex="-1"></main>
@@ -133,6 +141,6 @@
         </form>
       </dialog>
     </div>
-    <script type="module" src="js/app.js?v=149"></script>
+    <script type="module" src="js/app.js?v=150"></script>
   </body>
 </html>
