@@ -401,6 +401,17 @@ textarea {
 .activity-card h4 {
   margin: 0 0 0.25rem;
 }
+.daypart-label {
+  display: inline-block;
+  margin-left: 0.45rem;
+  padding: 0.12rem 0.38rem;
+  border: 1px solid #d5e1d9;
+  border-radius: 999px;
+  color: #718078;
+  font-size: 0.68rem;
+  font-weight: normal;
+  vertical-align: middle;
+}
 .activity-card p {
   margin: 0.25rem 0;
   line-height: 1.4;
@@ -1301,6 +1312,9 @@ dialog label {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.manage-info strong .daypart-label {
+  vertical-align: 1px;
 }
 .manage-info > span {
   white-space: nowrap;
