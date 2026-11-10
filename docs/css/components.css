@@ -392,30 +392,6 @@ a:focus-visible {
   color: #70520e;
 }
 
-.filter-info {
-  margin-left: 0.2rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #718078;
-  font-size: 0.85rem;
-  line-height: 1;
-}
-
-.filter-info:hover,
-.filter-info:focus-visible {
-  color: #126b45;
-}
-
-.filter-info-text {
-  display: inline-block;
-  margin-left: 0.45rem;
-  color: #64736c;
-  font-size: 0.75rem;
-  font-weight: normal;
-  line-height: 1.3;
-}
-
 @media print {
   .handbook-cover {
     min-height: 245mm;
