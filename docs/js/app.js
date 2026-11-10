@@ -207,7 +207,7 @@ function home() {
         dayparts,
       };
     });
-  return `<section class="hero"><div class="page-heading"><div><p class="eyebrow">Overzicht</p><h1>${esc(state.plan.metadata.title)}</h1></div><button type="button" class="button" id="edit-opening-times">Dagdelen aanpassen</button></div><p class="lead">Hier vind je een overzicht van je planning en activiteiten.</p><div class="home-meta"><div class="home-meta-primary"><span>Afdeling</span><strong>${esc(state.plan.metadata.department)}</strong></div><div class="home-meta-primary"><span>Actieve activiteiten</span><strong>${activeCount} van ${state.plan.activities.length}</strong></div><div><span>Bestandsstatus</span><strong class="${state.dirty ? "is-unsaved" : "is-saved"}">${fileStatus}</strong></div><div><span>Laatst gewijzigd</span><strong>${esc(lastUpdated)}</strong></div></div><section class="daily-overview" aria-labelledby="daily-overview-title"><div class="daily-overview-heading"><h2 id="daily-overview-title">Activiteiten per dag</h2><span>Deze week</span></div><p class="daily-overview-help">Per dagdeel zie je hoeveel tijd er nog beschikbaar is. Bij een overschrijding zie je hoeveel tijd er te veel is ingepland.</p><div class="daily-counts">${dailySummaries
+  return `<section class="hero"><div class="page-heading"><div><p class="eyebrow">Overzicht</p><h1>${esc(state.plan.metadata.title)}</h1></div><button type="button" class="button" id="edit-opening-times">Dagdelen aanpassen</button></div><p class="lead">Hier vind je een overzicht van je planning en activiteiten.</p><div class="home-meta"><div class="home-meta-primary"><span>Afdeling</span><strong>${esc(state.plan.metadata.department)}</strong></div><div class="home-meta-primary"><span>Actieve activiteiten</span><strong>${activeCount} van ${state.plan.activities.length}</strong></div><div><span>Bestandsstatus</span><strong class="${state.dirty ? "is-unsaved" : "is-saved"}">${fileStatus}</strong></div><div><span>Laatst gewijzigd</span><strong>${esc(lastUpdated)}</strong></div></div><section class="daily-overview" aria-labelledby="daily-overview-title"><div class="daily-overview-heading"><div><h2 id="daily-overview-title">Activiteiten per dag</h2><span>Deze week</span></div><button type="button" class="button small" id="toggle-dayparts" aria-expanded="false">Alle dagdelen tonen</button></div><p class="daily-overview-help">Per dagdeel zie je hoeveel tijd er nog beschikbaar is. Bij een overschrijding zie je hoeveel tijd er te veel is ingepland.</p><div class="daily-counts">${dailySummaries
     .map((summary, index) => {
       const percentage = Math.round(
           (summary.duration / summary.capacity) * 100,
@@ -553,6 +553,15 @@ function bindPage() {
     .querySelector("#print-button")
     ?.addEventListener("click", () => window.print());
   $("#edit-opening-times")?.addEventListener("click", editOpeningTimes);
+  $("#toggle-dayparts")?.addEventListener("click", (event) => {
+    const details = [...document.querySelectorAll(".daily-summary")],
+      shouldOpen = details.some((detail) => !detail.open);
+    details.forEach((detail) => (detail.open = shouldOpen));
+    event.currentTarget.textContent = shouldOpen
+      ? "Alle dagdelen inklappen"
+      : "Alle dagdelen tonen";
+    event.currentTarget.setAttribute("aria-expanded", String(shouldOpen));
+  });
   document.querySelectorAll(".capacity-info,.filter-info").forEach((button) =>
     button.addEventListener("click", () => {
       const text = button.nextElementSibling,
