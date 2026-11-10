@@ -658,6 +658,67 @@ dialog label {
   align-items: center;
   gap: 0.5rem;
 }
+.metadata-legend {
+  margin: 0 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8faf8;
+}
+.metadata-legend summary {
+  cursor: pointer;
+  padding: 0.65rem 0.8rem;
+  color: #126b45;
+  font-size: 0.82rem;
+  font-weight: bold;
+}
+.metadata-legend-items {
+  display: grid;
+  gap: 0.45rem 1rem;
+  padding: 0 0.8rem 0.75rem;
+  color: #718078;
+  font-size: 0.76rem;
+}
+.metadata-legend-items > span {
+  display: grid;
+  grid-template-columns: 8.5rem 1fr;
+  gap: 1rem;
+  align-items: baseline;
+}
+.metadata-legend-items > span > span {
+  min-width: 0;
+}
+.metadata-legend-items > span > :first-child {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 8.5rem;
+  min-height: 1.55rem;
+  box-sizing: border-box;
+  margin: 0;
+  line-height: 1.1;
+  text-align: left;
+}
+.metadata-legend-items > span > .daypart-label {
+  padding: 0.12rem 0.38rem;
+  justify-content: center;
+}
+.metadata-legend-items > span > .deadline {
+  padding: 0.24rem 0.5rem;
+  font-size: 0.76rem;
+  justify-content: center;
+}
+.metadata-legend-items > span > .meta-item {
+  font-size: 0.76rem;
+}
+.metadata-legend-items strong {
+  color: #46564d;
+}
+@media (max-width: 600px) {
+  .metadata-legend-items > span {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+}
 .activity-extra-options {
   border-top: 1px solid var(--line);
   padding-top: 0.8rem;
