@@ -647,6 +647,21 @@ dialog label {
   align-items: center;
   gap: 0.5rem;
 }
+.activity-extra-options {
+  border-top: 1px solid var(--line);
+  padding-top: 0.8rem;
+}
+.activity-extra-options summary {
+  cursor: pointer;
+  color: #126b45;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+.activity-extra-fields {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.8rem;
+}
 .weekly-fields {
   border: 1px solid var(--line);
   padding: 0.8rem;
@@ -1234,7 +1249,7 @@ dialog label {
   font-weight: normal;
 }
 .form-help {
-  margin: -0.55rem 0 0;
+  margin: -0.8rem 0 -0.25rem;
   color: #a0aaa4;
   font-size: 0.68rem;
   font-weight: normal;
