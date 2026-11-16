@@ -1027,18 +1027,15 @@ $("#save-plan").onclick = async () => {
     },
     json = JSON.stringify(exportPlan, null, 2),
     pad = (n) => String(n).padStart(2, "0"),
-    stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}`,
-    slug = (value) =>
+    date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
+    time = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`,
+    filenamePart = (value) =>
       value
-        .toLowerCase()
-        .replace(/[^a-z0-9-]+/g, "-")
-        .replace(/^-|-$/g, ""),
-    titleSlug = slug(state.plan.metadata.title),
-    departmentSlug = slug(state.plan.metadata.department),
-    planSlug = titleSlug.endsWith(`-${departmentSlug}`)
-      ? titleSlug
-      : `${titleSlug}-${departmentSlug}`,
-    name = `${stamp}-${planSlug}.json`;
+        .replace(/[<>:"/\\|?*]/g, "-")
+        .replace(/\s+/g, " ")
+        .replace(/[. ]+$/g, "")
+        .trim() || "Planning",
+    name = `${date} - ${filenamePart(state.plan.metadata.title)} (${time}).json`;
   try {
     if (window.showSaveFilePicker) {
       const handle = await window.showSaveFilePicker({
