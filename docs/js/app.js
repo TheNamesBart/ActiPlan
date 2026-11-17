@@ -304,9 +304,7 @@ function printPage() {
       if (page.blank)
         return `<div class="print-page blank-print-page${last ? " last-print-page" : ""}" aria-hidden="true"></div>`;
       const context =
-        state.mode === "week"
-          ? `Week ${state.week}`
-          : `Dagplanning · ${page.label}`;
+        `Week ${state.mode === "week" ? state.week : isoWeek(date).week}`;
       const extraWorkField = page.continuation
         ? ""
         : `<section class="print-extra-work" aria-label="Extra activiteiten"><strong>Extra activiteiten</strong><div class="print-extra-work-lines"><span></span><span></span><span></span></div></section>`;
