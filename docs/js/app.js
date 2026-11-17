@@ -321,7 +321,7 @@ function printPage() {
       rangeStart[1] === rangeEnd[1] && rangeStart[2] === rangeEnd[2]
         ? `${rangeStart[0]}–${rangeEnd[0]} ${rangeEnd.slice(1).join(" ")}`
         : `${formatDate(week[0])} – ${formatDate(week[6])}`;
-  return `<section><div class="page-heading"><div><p class="eyebrow">Printen</p><h1>Planning printen</h1></div><button class="button primary" id="print-button" ${hasPages ? "" : "disabled"}>Printen</button></div><div class="toolbar${state.mode === "week" ? " week-print-toolbar" : ""}"><div class="view-switcher" role="group" aria-label="Kies een weergave"><span class="view-switcher-label">Weergave</span><div class="view-switcher-options"><button type="button" class="${state.mode === "day" ? "selected" : ""}" data-view-mode="day" aria-pressed="${state.mode === "day"}">Dag</button><button type="button" class="${state.mode === "week" ? "selected" : ""}" data-view-mode="week" aria-pressed="${state.mode === "week"}">Week</button></div></div>${state.mode === "day" ? `<label>Datum<input id="date-choice" type="date" required value="${state.date}"></label>` : `<label>Jaar<input id="week-year" type="number" min="2000" max="2100" value="${state.weekYear}"></label><label>Weeknummer<input id="week-number" type="number" min="1" max="53" value="${state.week}"></label>  <div class="week-summary" aria-live="polite"><span>Periode</span><strong>${dateRange}</strong></div>`}</div>${hasPages ? `<div id="print-content" class="${state.mode === "week" ? "week-print" : ""}">${pages}</div>` : `<p class="notice print-empty">${emptyMessage}</p>`}</section>`;
+  return `<section><div class="page-heading"><div><p class="eyebrow">Printen</p><h1>Planning printen</h1></div><button class="button primary" id="print-button" ${hasPages ? "" : "disabled"}>Printen</button></div><div class="toolbar${state.mode === "week" ? " week-print-toolbar" : ""}"><div class="view-switcher" role="group" aria-label="Kies een weergave"><span class="view-switcher-label">Weergave</span><div class="view-switcher-options"><button type="button" class="${state.mode === "day" ? "selected" : ""}" data-view-mode="day" aria-pressed="${state.mode === "day"}">Dag</button><button type="button" class="${state.mode === "week" ? "selected" : ""}" data-view-mode="week" aria-pressed="${state.mode === "week"}">Week</button></div></div>${state.mode === "day" ? `<div class="date-navigation"><button type="button" class="date-arrow" data-date-offset="-1" title="Vorige dag" aria-label="Vorige dag">‹</button><label>Datum<input id="date-choice" type="date" required value="${state.date}"></label><button type="button" class="date-arrow" data-date-offset="1" title="Volgende dag" aria-label="Volgende dag">›</button></div>` : `<div class="week-navigation"><div class="week-fields"><label>Jaar<input id="week-year" type="number" min="2000" max="2100" value="${state.weekYear}"></label><div class="week-number-field"><span class="week-field-label">Weeknummer</span><div class="week-number-navigation"><button type="button" class="date-arrow" data-week-offset="-1" title="Vorige week" aria-label="Vorige week">‹</button><input id="week-number" type="number" min="1" max="53" value="${state.week}" aria-label="Weeknummer"><button type="button" class="date-arrow" data-week-offset="1" title="Volgende week" aria-label="Volgende week">›</button></div></div></div></div><div class="week-summary" aria-live="polite"><span>Periode</span><strong>${dateRange}</strong></div>`}</div>${hasPages ? `<div id="print-content" class="${state.mode === "week" ? "week-print" : ""}">${pages}</div>` : `<p class="notice print-empty">${emptyMessage}</p>`}</section>`;
 }
 function activityMatchesDay(activity, day) {
   return (
@@ -602,6 +602,24 @@ function bindPage() {
     state.date = e.target.value;
     render();
   });
+  document.querySelectorAll("[data-date-offset]").forEach((button) =>
+    button.addEventListener("click", () => {
+      const date = parseDate(state.date);
+      date.setDate(date.getDate() + Number(button.dataset.dateOffset));
+      state.date = dateKey(date);
+      render();
+    }),
+  );
+  document.querySelectorAll("[data-week-offset]").forEach((button) =>
+    button.addEventListener("click", () => {
+      const monday = dateFromIsoWeek(state.weekYear, state.week, 0);
+      monday.setDate(monday.getDate() + Number(button.dataset.weekOffset) * 7);
+      const next = isoWeek(monday);
+      state.weekYear = next.year;
+      state.week = next.week;
+      render();
+    }),
+  );
   $("#week-year")?.addEventListener("change", (e) => {
     state.weekYear = +e.target.value;
     validateWeek();
