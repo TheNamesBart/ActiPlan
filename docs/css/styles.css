@@ -522,17 +522,6 @@ textarea {
 .activity-card h4 {
   margin: 0 0 0.25rem;
 }
-.daypart-label {
-  display: inline-block;
-  margin-left: 0.45rem;
-  padding: 0.12rem 0.38rem;
-  border: 1px solid #d5e1d9;
-  border-radius: 999px;
-  color: #718078;
-  font-size: 0.68rem;
-  font-weight: normal;
-  vertical-align: middle;
-}
 .activity-card p {
   margin: 0.25rem 0;
   line-height: 1.4;
@@ -618,6 +607,23 @@ textarea {
 }
 .manage-card {
   position: relative;
+}
+.manage-card.duplicate-in-daypart {
+  border-left: 3px solid #b3261e;
+}
+.duplicate-meta {
+  display: inline-block;
+  margin-left: 0.45rem;
+  padding: 0.08rem 0.35rem;
+  border: 1px solid #e0b3b0;
+  border-radius: 999px;
+  background: #fff2f1;
+  color: #9e2722;
+  font-size: 0.64rem;
+  font-weight: normal;
+  line-height: 1.1;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 .manage-columns {
   row-gap: 0;
@@ -818,10 +824,6 @@ dialog label {
   margin: 0;
   line-height: 1.1;
   text-align: left;
-}
-.metadata-legend-items > span > .daypart-label {
-  padding: 0.12rem 0.38rem;
-  justify-content: center;
 }
 .metadata-legend-items > span > .deadline {
   padding: 0.24rem 0.5rem;
@@ -1496,9 +1498,6 @@ dialog label {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.manage-info strong .daypart-label {
-  vertical-align: 1px;
 }
 .manage-info > span {
   white-space: nowrap;
