@@ -1267,27 +1267,29 @@ dialog label {
   text-align: center;
 }
 .welcome-alternative {
-  display: grid;
-  justify-items: center;
-  gap: 0.2rem;
-  padding-top: 0.15rem;
+  width: 100%;
+  min-height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.75rem;
+  border: 0;
+  border-radius: 0;
   border-top: 1px solid var(--line);
   color: #64736c;
-  font-size: 0.85rem;
-}
-.text-link {
-  display: block;
-  border: 0;
   background: transparent;
-  color: var(--green);
-  padding: 0.15rem 0.35rem;
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
+  box-shadow: none;
+  cursor: pointer;
   font-size: 0.9rem;
 }
-.text-link:hover {
+.welcome-alternative:hover,
+.welcome-alternative:focus-visible {
   color: var(--green);
   border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
 }
 .github-badge {
   position: fixed;
