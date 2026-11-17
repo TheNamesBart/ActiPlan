@@ -98,6 +98,24 @@ export function dateFromIsoWeek(year, week, offset = 0) {
   monday.setDate(jan4.getDate() - dayIndex(jan4) + (week - 1) * 7 + offset);
   return monday;
 }
+export function recurrencesOverlap(first, second) {
+  const left = first.recurrence,
+    right = second.recurrence;
+  if (left.type === "daily" || right.type === "daily") return true;
+  if (left.type === "monthly" && right.type === "monthly") {
+    return (
+      left.weekday === right.weekday &&
+      String(left.occurrence) === String(right.occurrence)
+    );
+  }
+  if (left.type === "weekly" && right.type === "monthly") {
+    return left.weekdays.includes(right.weekday);
+  }
+  if (left.type === "monthly" && right.type === "weekly") {
+    return right.weekdays.includes(left.weekday);
+  }
+  return left.weekdays.some((weekday) => right.weekdays.includes(weekday));
+}
 export function occursOn(activity, date) {
   if (!activity.active) return false;
   const r = activity.recurrence,

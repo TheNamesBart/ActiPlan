@@ -16,8 +16,9 @@ import {
   isoWeek,
   weeksInYear,
   dateFromIsoWeek,
+  recurrencesOverlap,
   recurrenceLabel,
-} from "./core.js?v=6";
+} from "./core.js?v=7";
 import { $, esc } from "./ui.js";
 import { confirmDialog, promptDialog } from "./dialogs.js?v=4";
 const today = dateKey(new Date());
@@ -406,7 +407,8 @@ function manageCard(a, restricted) {
       (candidate) =>
         candidate.daypart === a.daypart &&
         candidate.name.trim().toLocaleLowerCase() ===
-          a.name.trim().toLocaleLowerCase(),
+          a.name.trim().toLocaleLowerCase() &&
+        recurrencesOverlap(a, candidate),
     ).length,
     monthlyMeta =
       a.recurrence.type === "monthly"
@@ -925,7 +927,8 @@ async function reorder(id, targetId, after = false, targetDaypart) {
         candidate.id !== id &&
         candidate.daypart === targetDaypart &&
         candidate.name.trim().toLocaleLowerCase() ===
-          activity.name.trim().toLocaleLowerCase(),
+          activity.name.trim().toLocaleLowerCase() &&
+        recurrencesOverlap(activity, candidate),
     )
   ) {
     const targetLabel =

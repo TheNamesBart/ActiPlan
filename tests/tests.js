@@ -15,6 +15,7 @@ import {
   parseDate,
   validDeadline,
   summarizeDay,
+  recurrencesOverlap,
 } from "../docs/js/core.js";
 const results = document.querySelector("#results");
 let passed = 0;
@@ -45,6 +46,16 @@ test("dubbele id wordt geweigerd", () =>
     ],
   }).some((x) => x.includes("dubbel")));
 test("dagelijkse herhaling", () => occursOn(plan.activities[0], day));
+test("verschillende vaste dagen hebben geen overlap", () =>
+  !recurrencesOverlap(
+    { recurrence: { type: "weekly", weekdays: ["mon"] } },
+    { recurrence: { type: "weekly", weekdays: ["tue"] } },
+  ));
+test("overlappende vaste dagen zijn dubbel", () =>
+  recurrencesOverlap(
+    { recurrence: { type: "weekly", weekdays: ["mon", "tue"] } },
+    { recurrence: { type: "weekly", weekdays: ["tue"] } },
+  ));
 test("wekelijkse herhaling", () =>
   occursOn(plan.activities[8], new Date(2024, 1, 26)) &&
   !occursOn(plan.activities[8], new Date(2024, 1, 27)));

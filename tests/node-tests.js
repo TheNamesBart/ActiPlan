@@ -14,6 +14,7 @@ import {
   createDaypartTimes,
   deadlineWithinDaypart,
   summarizeDay,
+  recurrencesOverlap,
 } from "../docs/js/core.js";
 const plan = samplePlan();
 const checks = [
@@ -23,6 +24,20 @@ const checks = [
     validatePlan({ ...plan, format: "fout" }).length > 0,
   ],
   ["dagelijkse herhaling", occursOn(plan.activities[0], new Date(2024, 1, 29))],
+  [
+    "verschillende vaste dagen hebben geen overlap",
+    !recurrencesOverlap(
+      { recurrence: { type: "weekly", weekdays: ["mon"] } },
+      { recurrence: { type: "weekly", weekdays: ["tue"] } },
+    ),
+  ],
+  [
+    "overlappende vaste dagen zijn dubbel",
+    recurrencesOverlap(
+      { recurrence: { type: "weekly", weekdays: ["mon", "tue"] } },
+      { recurrence: { type: "weekly", weekdays: ["tue"] } },
+    ),
+  ],
   [
     "maanddag 31 werkt in schrikkeljaar",
     occursOn(plan.activities[3], new Date(2024, 1, 29)),
