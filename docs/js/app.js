@@ -161,23 +161,9 @@ function groups(items, print = false, day, continuation = false) {
   }
   return out || `<p class="empty">Geen activiteiten gepland.</p>`;
 }
-function usesMultipleDayparts(activity) {
-  const name = activity.name.trim().toLocaleLowerCase();
-  return new Set(
-    state.plan.activities
-      .filter((candidate) => candidate.name.trim().toLocaleLowerCase() === name)
-      .map((candidate) => candidate.daypart),
-  ).size > 1;
-}
-function daypartLabel(key) {
-  return (DAYPARTS.find(([daypart]) => daypart === key)?.[1] || key).toLowerCase();
-}
 function activityCard(a, print = false) {
   const hasDescription = Boolean(a.description?.trim());
-  const daypart = !print && usesMultipleDayparts(a)
-    ? `<span class="daypart-label">${esc(daypartLabel(a.daypart))}</span>`
-    : "";
-  return `<article class="activity-card ${a.active ? "" : "inactive"}${a.loadOnly ? " other-department" : ""}${print && !hasDescription ? " no-description" : ""}">${print ? '<span class="check">☐</span>' : ""}<div class="activity-content"><div class="activity-title">${a.deadline ? `<span class="deadline${print ? " print-deadline" : ""}" aria-label="Uiterlijk om ${esc(a.deadline)}">◷ ${esc(a.deadline)}</span>` : ""}<h4>${esc(a.name)}${daypart}</h4></div>${hasDescription ? `<p>${esc(a.description)}</p>` : ""}${!print ? `<small class="activity-meta">${a.durationMinutes != null ? `<span class="meta-item" title="Indicatie uitvoeringsduur">◷ Indicatie ${formatMinutes(a.durationMinutes)}</span>` : ""}${a.workInstruction?.trim() ? '<span class="meta-item instruction-meta" title="Werkinstructie beschikbaar">✦ Werkinstructie</span>' : ""}${a.loadOnly ? '<span class="meta-item other-department-meta" title="Activiteit op andere afdeling">Andere afdeling</span>' : ""}</small>` : ""}${print ? '<div class="signature"><strong>Uitgevoerd door:</strong></div>' : ""}</div></article>`;
+  return `<article class="activity-card ${a.active ? "" : "inactive"}${a.loadOnly ? " other-department" : ""}${print && !hasDescription ? " no-description" : ""}">${print ? '<span class="check">☐</span>' : ""}<div class="activity-content"><div class="activity-title">${a.deadline ? `<span class="deadline${print ? " print-deadline" : ""}" aria-label="Uiterlijk om ${esc(a.deadline)}">◷ ${esc(a.deadline)}</span>` : ""}<h4>${esc(a.name)}</h4></div>${hasDescription ? `<p>${esc(a.description)}</p>` : ""}${!print ? `<small class="activity-meta">${a.durationMinutes != null ? `<span class="meta-item" title="Indicatie uitvoeringsduur">◷ Indicatie ${formatMinutes(a.durationMinutes)}</span>` : ""}${a.workInstruction?.trim() ? '<span class="meta-item instruction-meta" title="Werkinstructie beschikbaar">✦ Werkinstructie</span>' : ""}${a.loadOnly ? '<span class="meta-item other-department-meta" title="Activiteit op andere afdeling">Andere afdeling</span>' : ""}</small>` : ""}${print ? '<div class="signature"><strong>Uitgevoerd door:</strong></div>' : ""}</div></article>`;
 }
 function render() {
   const main = $("#main");
@@ -304,9 +290,7 @@ function printPage() {
       if (page.blank)
         return `<div class="print-page blank-print-page${last ? " last-print-page" : ""}" aria-hidden="true"></div>`;
       const context =
-        state.mode === "week"
-          ? `Week ${state.week}`
-          : `Dagplanning · ${page.label}`;
+        `Week ${state.mode === "week" ? state.week : isoWeek(date).week}`;
       const extraWorkField = page.continuation
         ? ""
         : `<section class="print-extra-work" aria-label="Extra activiteiten"><strong>Extra activiteiten</strong><div class="print-extra-work-lines"><span></span><span></span><span></span></div></section>`;
@@ -321,7 +305,7 @@ function printPage() {
       rangeStart[1] === rangeEnd[1] && rangeStart[2] === rangeEnd[2]
         ? `${rangeStart[0]}–${rangeEnd[0]} ${rangeEnd.slice(1).join(" ")}`
         : `${formatDate(week[0])} – ${formatDate(week[6])}`;
-  return `<section><div class="page-heading"><div><p class="eyebrow">Printen</p><h1>Planning printen</h1></div><button class="button primary" id="print-button" ${hasPages ? "" : "disabled"}>Printen</button></div><div class="toolbar${state.mode === "week" ? " week-print-toolbar" : ""}"><div class="view-switcher" role="group" aria-label="Kies een weergave"><span class="view-switcher-label">Weergave</span><div class="view-switcher-options"><button type="button" class="${state.mode === "day" ? "selected" : ""}" data-view-mode="day" aria-pressed="${state.mode === "day"}">Dag</button><button type="button" class="${state.mode === "week" ? "selected" : ""}" data-view-mode="week" aria-pressed="${state.mode === "week"}">Week</button></div></div>${state.mode === "day" ? `<label>Datum<input id="date-choice" type="date" required value="${state.date}"></label>` : `<label>Jaar<input id="week-year" type="number" min="2000" max="2100" value="${state.weekYear}"></label><label>Weeknummer<input id="week-number" type="number" min="1" max="53" value="${state.week}"></label>  <div class="week-summary" aria-live="polite"><span>Periode</span><strong>${dateRange}</strong></div>`}</div>${hasPages ? `<div id="print-content" class="${state.mode === "week" ? "week-print" : ""}">${pages}</div>` : `<p class="notice print-empty">${emptyMessage}</p>`}</section>`;
+  return `<section><div class="page-heading"><div><p class="eyebrow">Printen</p><h1>Planning printen</h1></div><button class="button primary" id="print-button" ${hasPages ? "" : "disabled"}>Printen</button></div><div class="toolbar${state.mode === "week" ? " week-print-toolbar" : ""}"><div class="view-switcher" role="group" aria-label="Kies een weergave"><span class="view-switcher-label">Weergave</span><div class="view-switcher-options"><button type="button" class="${state.mode === "day" ? "selected" : ""}" data-view-mode="day" aria-pressed="${state.mode === "day"}">Dag</button><button type="button" class="${state.mode === "week" ? "selected" : ""}" data-view-mode="week" aria-pressed="${state.mode === "week"}">Week</button></div></div>${state.mode === "day" ? `<div class="date-navigation"><button type="button" class="date-arrow" data-date-offset="-1" title="Vorige dag" aria-label="Vorige dag">‹</button><label>Datum<input id="date-choice" type="date" required value="${state.date}"></label><button type="button" class="date-arrow" data-date-offset="1" title="Volgende dag" aria-label="Volgende dag">›</button></div>` : `<div class="week-navigation"><div class="week-fields"><label>Jaar<input id="week-year" type="number" min="2000" max="2100" value="${state.weekYear}"></label><div class="week-number-field"><span class="week-field-label">Weeknummer</span><div class="week-number-navigation"><button type="button" class="date-arrow" data-week-offset="-1" title="Vorige week" aria-label="Vorige week">‹</button><input id="week-number" type="number" min="1" max="53" value="${state.week}" aria-label="Weeknummer"><button type="button" class="date-arrow" data-week-offset="1" title="Volgende week" aria-label="Volgende week">›</button></div></div></div></div><div class="week-summary" aria-live="polite"><span>Periode</span><strong>${dateRange}</strong></div>`}</div>${hasPages ? `<div id="print-content" class="${state.mode === "week" ? "week-print" : ""}">${pages}</div>` : `<p class="notice print-empty">${emptyMessage}</p>`}</section>`;
 }
 function activityMatchesDay(activity, day) {
   return (
@@ -406,7 +390,7 @@ function manage() {
         state.filters.active ||
         state.filters.recurrence,
     );
-  return `<section><div class="page-heading"><div><p class="eyebrow">Aan de slag</p><h1>Planning bewerken</h1></div><button class="button primary" id="add-activity">Activiteit toevoegen</button></div><div class="toolbar filters${restricted ? " has-filter-warning" : ""}"><label>Zoeken<input id="filter-q" value="${esc(state.filters.q)}" placeholder="Naam of beschrijving"></label><label class="day-filter-label">Dag<select id="filter-day"><option value="">Alle dagen</option>${WEEKDAYS.map((x) => `<option value="${x[0]}" ${state.filters.day === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Herhaling<select id="filter-recurrence"><option value="">Alle herhalingen</option><option value="weekly" ${state.filters.recurrence === "weekly" ? "selected" : ""}>Dagen</option><option value="monthly" ${state.filters.recurrence === "monthly" ? "selected" : ""}>Maandelijks</option></select></label><label>Status<select id="filter-active"><option value="">Alle</option><option value="true" ${state.filters.active === "true" ? "selected" : ""}>Actief</option><option value="false" ${state.filters.active === "false" ? "selected" : ""}>Inactief</option></select></label>${hasFilters ? '<button type="button" class="button small" id="clear-filters">Filters wissen</button>' : ""}      ${restricted ? '    <p class="manage-restricted"><span class="message-label">Let op:</span> <span>Verslepen is uitgeschakeld zolang er filters actief zijn.</span></p>' : ""}</div><details class="metadata-legend"><summary>Uitleg bij labels</summary><div class="metadata-legend-items"><span><span class="daypart-label">ochtend</span><span>dezelfde activiteit komt in meerdere dagdelen voor</span></span><span><span class="deadline">◷ 14:00</span><span>tijdstip waarop de activiteit uiterlijk afgerond moet zijn</span></span><span><span class="meta-item">◷ 30 minuten</span><span>indicatie van de benodigde tijd</span></span><span><span class="meta-item instruction-meta">✦ Werkinstructie</span><span>er is een werkinstructie beschikbaar</span></span><span><span class="meta-item other-department-meta">Andere afdeling</span><span>activiteit voor een andere afdeling</span></span></div></details><div class="manage-list">${DAYPARTS.map(
+  return `<section><div class="page-heading"><div><p class="eyebrow">Aan de slag</p><h1>Planning bewerken</h1></div><button class="button primary" id="add-activity">Activiteit toevoegen</button></div><div class="toolbar filters${restricted ? " has-filter-warning" : ""}"><label>Zoeken<input id="filter-q" value="${esc(state.filters.q)}" placeholder="Naam of beschrijving"></label><label class="day-filter-label">Dag<select id="filter-day"><option value="">Alle dagen</option>${WEEKDAYS.map((x) => `<option value="${x[0]}" ${state.filters.day === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Herhaling<select id="filter-recurrence"><option value="">Alle herhalingen</option><option value="weekly" ${state.filters.recurrence === "weekly" ? "selected" : ""}>Dagen</option><option value="monthly" ${state.filters.recurrence === "monthly" ? "selected" : ""}>Maandelijks</option></select></label><label>Status<select id="filter-active"><option value="">Alle</option><option value="true" ${state.filters.active === "true" ? "selected" : ""}>Actief</option><option value="false" ${state.filters.active === "false" ? "selected" : ""}>Inactief</option></select></label>${hasFilters ? '<button type="button" class="button small" id="clear-filters">Filters wissen</button>' : ""}      ${restricted ? '    <p class="manage-restricted"><span class="message-label">Let op:</span> <span>Verslepen is uitgeschakeld zolang er filters actief zijn.</span></p>' : ""}</div><details class="metadata-legend"><summary>Uitleg bij labels</summary><div class="metadata-legend-items"><span><span class="deadline">◷ 14:00</span><span>tijdstip waarop de activiteit uiterlijk afgerond moet zijn</span></span><span><span class="meta-item">◷ 30 minuten</span><span>indicatie van de benodigde tijd</span></span><span><span class="meta-item instruction-meta">✦ Werkinstructie</span><span>er is een werkinstructie beschikbaar</span></span><span><span class="meta-item other-department-meta">Andere afdeling</span><span>activiteit voor een andere afdeling</span></span></div></details><div class="manage-list">${DAYPARTS.map(
     ([key, label]) =>
       `<section class="manage-group"><h2>${label} <small>(${timeValue(state.plan, state.filters.day || DEFAULT_DEADLINE_DAY, key)})</small>${!state.filters.day && afwijkendeDagenVoorDagdeel(state.plan, key).length ? `<small class="manage-time-exception">Tijden wijken af op: ${esc(afwijkendeDagenVoorDagdeel(state.plan, key).join(", "))}</small>` : ""}</h2>${capacitySummary(all, key, state.filters.day)}<div class="manage-columns" aria-hidden="true"><span></span><span>Activiteit</span>${WEEKDAYS.map(([, day]) => `<span>${day.slice(0, 2)}</span>`).join("")}<span></span></div><div data-dropzone="${key}">${
         filtered
@@ -418,6 +402,12 @@ function manage() {
 }
 function manageCard(a, restricted) {
   const instruction = a.workInstruction?.trim(),
+    duplicateCount = state.plan.activities.filter(
+      (candidate) =>
+        candidate.daypart === a.daypart &&
+        candidate.name.trim().toLocaleLowerCase() ===
+          a.name.trim().toLocaleLowerCase(),
+    ).length,
     monthlyMeta =
       a.recurrence.type === "monthly"
         ? `<span class="manage-monthly-recurrence">Maandelijks · elke ${esc(MONTHLY_OCCURRENCES.find(([key]) => key === String(a.recurrence.occurrence))?.[1] || "onbekend")} ${esc(WEEKDAYS.find(([key]) => key === a.recurrence.weekday)?.[1].toLowerCase() || "onbekende dag")}</span>`
@@ -428,10 +418,7 @@ function manageCard(a, restricted) {
         : a.recurrence.type === "weekly"
           ? a.recurrence.weekdays
           : [a.recurrence.weekday];
-  const daypart = usesMultipleDayparts(a)
-    ? `<span class="daypart-label">${esc(daypartLabel(a.daypart))}</span>`
-    : "";
-  return `<article class="manage-card ${a.active ? "" : "inactive"}${a.loadOnly ? " other-department" : ""}" draggable="${!restricted}" data-id="${esc(a.id)}"><span class="drag-handle" title="Verslepen om te sorteren" aria-label="Verslepen om te sorteren">⋮⋮</span><div class="manage-info"><strong>${esc(a.name)}${daypart}</strong><span>${esc(a.description)}</span><small>${a.deadline ? `<span class="deadline" aria-label="Uiterlijk om ${esc(a.deadline)}">◷ ${esc(a.deadline)}</span>` : ""}${a.durationMinutes != null ? `<span class="meta-item" title="Uitvoeringsduur">◷ ${formatMinutes(a.durationMinutes)}</span>` : ""}${instruction ? '<span class="meta-item instruction-meta" title="Werkinstructie beschikbaar" aria-label="Werkinstructie beschikbaar">✦ Werkinstructie</span>' : ""}${a.loadOnly ? '<span class="meta-item other-department-meta" title="Activiteit op andere afdeling">Andere afdeling</span>' : ""}</small></div><div class="manage-days" aria-label="Uitvoeringsdagen">${WEEKDAYS.map(([day, label]) => `<span class="${days.includes(day) ? "is-scheduled" : ""}" title="${days.includes(day) ? `${label}: uitvoeren` : `${label}: niet uitvoeren`}">${days.includes(day) ? "✓" : "–"}</span>`).join("")}${monthlyMeta}</div><div class="manage-actions"><button class="icon-button edit" data-id="${a.id}" title="Bewerken" aria-label="Bewerken">✎</button><button class="icon-button copy" data-id="${a.id}" title="Kopiëren" aria-label="Kopiëren">⧉</button><button class="icon-button delete" data-id="${a.id}" title="Verwijderen" aria-label="Verwijderen">×</button></div></article>`;
+  return `<article class="manage-card ${a.active ? "" : "inactive"}${a.loadOnly ? " other-department" : ""}${duplicateCount > 1 ? " duplicate-in-daypart" : ""}" draggable="${!restricted}" data-id="${esc(a.id)}"><span class="drag-handle" title="Verslepen om te sorteren" aria-label="Verslepen om te sorteren">⋮⋮</span><div class="manage-info"><strong>${esc(a.name)}${duplicateCount > 1 ? '<span class="duplicate-meta" title="Deze naam komt meerdere keren voor in dit dagdeel">dubbel</span>' : ""}</strong><span>${esc(a.description)}</span><small>${a.deadline ? `<span class="deadline" aria-label="Uiterlijk om ${esc(a.deadline)}">◷ ${esc(a.deadline)}</span>` : ""}${a.durationMinutes != null ? `<span class="meta-item" title="Uitvoeringsduur">◷ ${formatMinutes(a.durationMinutes)}</span>` : ""}${instruction ? '<span class="meta-item instruction-meta" title="Werkinstructie beschikbaar" aria-label="Werkinstructie beschikbaar">✦ Werkinstructie</span>' : ""}${a.loadOnly ? '<span class="meta-item other-department-meta" title="Activiteit op andere afdeling">Andere afdeling</span>' : ""}</small></div><div class="manage-days" aria-label="Uitvoeringsdagen">${WEEKDAYS.map(([day, label]) => `<span class="${days.includes(day) ? "is-scheduled" : ""}" title="${days.includes(day) ? `${label}: uitvoeren` : `${label}: niet uitvoeren`}">${days.includes(day) ? "✓" : "–"}</span>`).join("")}${monthlyMeta}</div><div class="manage-actions"><button class="icon-button edit" data-id="${a.id}" title="Bewerken" aria-label="Bewerken">✎</button><button class="icon-button copy" data-id="${a.id}" title="Kopiëren" aria-label="Kopiëren">⧉</button><button class="icon-button delete" data-id="${a.id}" title="Verwijderen" aria-label="Verwijderen">×</button></div></article>`;
 }
 function form(existing) {
   const a = existing || {
@@ -602,6 +589,24 @@ function bindPage() {
     state.date = e.target.value;
     render();
   });
+  document.querySelectorAll("[data-date-offset]").forEach((button) =>
+    button.addEventListener("click", () => {
+      const date = parseDate(state.date);
+      date.setDate(date.getDate() + Number(button.dataset.dateOffset));
+      state.date = dateKey(date);
+      render();
+    }),
+  );
+  document.querySelectorAll("[data-week-offset]").forEach((button) =>
+    button.addEventListener("click", () => {
+      const monday = dateFromIsoWeek(state.weekYear, state.week, 0);
+      monday.setDate(monday.getDate() + Number(button.dataset.weekOffset) * 7);
+      const next = isoWeek(monday);
+      state.weekYear = next.year;
+      state.week = next.week;
+      render();
+    }),
+  );
   $("#week-year")?.addEventListener("change", (e) => {
     state.weekYear = +e.target.value;
     validateWeek();
@@ -685,7 +690,7 @@ function bindPage() {
       ),
     );
   document.querySelectorAll("[data-dropzone]").forEach((z) =>
-    z.addEventListener("drop", (e) => {
+    z.addEventListener("drop", async (e) => {
       e.preventDefault();
       const id = e.dataTransfer.getData("text/plain"),
         target = e.target.closest("[data-id]"),
@@ -910,7 +915,28 @@ function move(id, direction) {
   setStatus("Wijzigingen nog niet opgeslagen", true);
   render();
 }
-function reorder(id, targetId, after = false, targetDaypart) {
+async function reorder(id, targetId, after = false, targetDaypart) {
+  const activity = state.plan.activities.find((item) => item.id === id);
+  if (
+    activity &&
+    activity.daypart !== targetDaypart &&
+    state.plan.activities.some(
+      (candidate) =>
+        candidate.id !== id &&
+        candidate.daypart === targetDaypart &&
+        candidate.name.trim().toLocaleLowerCase() ===
+          activity.name.trim().toLocaleLowerCase(),
+    )
+  ) {
+    const targetLabel =
+      DAYPARTS.find(([key]) => key === targetDaypart)?.[1] ||
+      targetDaypart;
+    const confirmed = await confirmDialog(
+      `'${activity.name}' bestaat al in ${targetLabel.toLocaleLowerCase()}. Als je doorgaat, ontstaat een dubbele activiteit. Wil je deze activiteit verplaatsen?`,
+      "Dubbele activiteit",
+    );
+    if (!confirmed) return;
+  }
   if (
     !reorderActivities(
       state.plan.activities,
