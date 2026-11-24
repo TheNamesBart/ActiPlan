@@ -6,6 +6,7 @@ import {
   dateFromIsoWeek,
   weeksInYear,
   orderActivities,
+  groupActivitiesByName,
   reorderActivities,
   recurrenceLabel,
   deadlineWithinDaypart,
@@ -16,7 +17,7 @@ import {
   validDeadline,
   summarizeDay,
   recurrencesOverlap,
-} from "../docs/js/core.js";
+} from "../docs/js/core.js?v=9";
 const results = document.querySelector("#results");
 let passed = 0;
 function test(name, fn) {
@@ -68,6 +69,35 @@ test("activiteiten zijn op dagdeel en sortOrder geordend", () =>
     { ...plan.activities[1], sortOrder: 2 },
     { ...plan.activities[0], sortOrder: 0 },
   ])[0].daypart === "before_opening");
+test("gelijknamige activiteiten groeperen zonder varianten samen te voegen", () => {
+  const activities = [
+      {
+        id: "variant-morning",
+        name: " Vlinderen bij kassa ",
+        daypart: "morning",
+        durationMinutes: 30,
+      },
+      {
+        id: "variant-afternoon",
+        name: "vlinderen bij kassa",
+        daypart: "afternoon",
+        durationMinutes: 60,
+      },
+      { id: "other", name: "Andere taak", daypart: "evening" },
+    ],
+    groups = groupActivitiesByName(activities);
+  return (
+    groups.length === 2 &&
+    groups[0].length === 2 &&
+    groups[0][0] === activities[0] &&
+    groups[0][1] === activities[1] &&
+    groups[1][0] === activities[2] &&
+    activities[0].durationMinutes === 30 &&
+    activities[1].durationMinutes === 60 &&
+    activities[0].daypart === "morning" &&
+    activities[1].daypart === "afternoon"
+  );
+});
 test("taak verplaatsen naar ander dagdeel", () => {
   const activities = [
     { id: "a", daypart: "morning", sortOrder: 0 },
@@ -101,8 +131,13 @@ test("taak verplaatsen naar leeg dagdeel", () => {
     activities.find((a) => a.id === "a").sortOrder === 0
   );
 });
-test("dagelijkse herhaling krijgt een label", () =>
-  recurrenceLabel({ type: "daily" }) === "Dagen (alle dagen)");
+test("dagelijkse herhaling wordt als alle dagen weergegeven", () =>
+  recurrenceLabel({ type: "daily" }) === "Alle dagen");
+test("wekelijkse herhaling op alle dagen wordt samengevat", () =>
+  recurrenceLabel({
+    type: "weekly",
+    weekdays: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+  }) === "Alle dagen");
 test("dagbelasting wordt per dagdeel uitgesplitst", () => {
   const day = new Date(2026, 10, 9),
     parts = summarizeDay(
