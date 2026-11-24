@@ -48,6 +48,7 @@ const state = {
   mode: "week",
   weekYear: isoWeek(new Date()).year,
   week: isoWeek(new Date()).week,
+  manageView: "list",
   filters: { ...DEFAULT_FILTERS },
 };
 const RECOVERY_KEY = "actiplan-recovery-v1";
@@ -391,25 +392,75 @@ function manage() {
         state.filters.active ||
         state.filters.recurrence,
     );
-  return `<section><div class="page-heading"><div><p class="eyebrow">Aan de slag</p><h1>Planning bewerken</h1></div><button class="button primary" id="add-activity">Activiteit toevoegen</button></div><div class="toolbar filters${restricted ? " has-filter-warning" : ""}"><label>Zoeken<input id="filter-q" value="${esc(state.filters.q)}" placeholder="Naam of beschrijving"></label><label class="day-filter-label">Dag<select id="filter-day"><option value="">Alle dagen</option>${WEEKDAYS.map((x) => `<option value="${x[0]}" ${state.filters.day === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Herhaling<select id="filter-recurrence"><option value="">Alle herhalingen</option><option value="weekly" ${state.filters.recurrence === "weekly" ? "selected" : ""}>Dagen</option><option value="monthly" ${state.filters.recurrence === "monthly" ? "selected" : ""}>Maandelijks</option></select></label><label>Status<select id="filter-active"><option value="">Alle</option><option value="true" ${state.filters.active === "true" ? "selected" : ""}>Actief</option><option value="false" ${state.filters.active === "false" ? "selected" : ""}>Inactief</option></select></label>${hasFilters ? '<button type="button" class="button small" id="clear-filters">Filters wissen</button>' : ""}      ${restricted ? '    <p class="manage-restricted"><span class="message-label">Let op:</span> <span>Verslepen is uitgeschakeld zolang er filters actief zijn.</span></p>' : ""}</div><details class="metadata-legend"><summary>Uitleg bij labels</summary><div class="metadata-legend-items"><span><span class="deadline">◷ 14:00</span><span>tijdstip waarop de activiteit uiterlijk afgerond moet zijn</span></span><span><span class="meta-item">◷ 30 minuten</span><span>indicatie van de benodigde tijd</span></span><span><span class="meta-item instruction-meta">✦ Werkinstructie</span><span>er is een werkinstructie beschikbaar</span></span><span><span class="meta-item other-department-meta">Andere afdeling</span><span>activiteit voor een andere afdeling</span></span></div></details><div class="manage-list">${DAYPARTS.map(
-    ([key, label]) =>
-      `<section class="manage-group"><h2>${label} <small>(${timeValue(state.plan, state.filters.day || DEFAULT_DEADLINE_DAY, key)})</small>${!state.filters.day && afwijkendeDagenVoorDagdeel(state.plan, key).length ? `<small class="manage-time-exception">Tijden wijken af op: ${esc(afwijkendeDagenVoorDagdeel(state.plan, key).join(", "))}</small>` : ""}</h2>${capacitySummary(all, key, state.filters.day)}<div class="manage-columns" aria-hidden="true"><span></span><span>Activiteit</span>${WEEKDAYS.map(([, day]) => `<span>${day.slice(0, 2)}</span>`).join("")}<span></span></div><div data-dropzone="${key}">${
-        filtered
-          .filter((a) => a.daypart === key)
-          .map((a) => manageCard(a, restricted))
-          .join("") || '<p class="empty">Geen activiteiten.</p>'
-      }</div></section>`,
-  ).join("")}</div></section>`;
+  const content =
+    state.manageView === "week"
+      ? manageWeekOverview(filtered, hasFilters)
+      : `<div class="manage-list">${DAYPARTS.map(
+          ([key, label]) =>
+            `<section class="manage-group"><h2>${label} <small>(${timeValue(state.plan, state.filters.day || DEFAULT_DEADLINE_DAY, key)})</small>${!state.filters.day && afwijkendeDagenVoorDagdeel(state.plan, key).length ? `<small class="manage-time-exception">Tijden wijken af op: ${esc(afwijkendeDagenVoorDagdeel(state.plan, key).join(", "))}</small>` : ""}</h2>${capacitySummary(all, key, state.filters.day)}<div class="manage-columns" aria-hidden="true"><span></span><span>Activiteit</span>${WEEKDAYS.map(([, day]) => `<span>${day.slice(0, 2)}</span>`).join("")}<span></span></div><div data-dropzone="${key}">${
+              filtered
+                .filter((a) => a.daypart === key)
+                .map((a) => manageCard(a, restricted))
+                .join("") || '<p class="empty">Geen activiteiten.</p>'
+            }</div></section>`,
+        ).join("")}</div>`;
+  return `<section><div class="page-heading"><div><p class="eyebrow">Aan de slag</p><h1>Planning bewerken</h1></div><button class="button primary" id="add-activity">Activiteit toevoegen</button></div><div class="manage-view-toolbar"><div class="view-switcher" role="group" aria-label="Kies een beheerweergave"><span class="view-switcher-label">Weergave</span><div class="view-switcher-options"><button type="button" class="${state.manageView === "list" ? "selected" : ""}" data-manage-view="list" aria-pressed="${state.manageView === "list"}">Lijst</button><button type="button" class="${state.manageView === "week" ? "selected" : ""}" data-manage-view="week" aria-pressed="${state.manageView === "week"}">Weekoverzicht</button></div></div></div><div class="toolbar filters${restricted && state.manageView === "list" ? " has-filter-warning" : ""}"><label>Zoeken<input id="filter-q" value="${esc(state.filters.q)}" placeholder="Naam of beschrijving"></label><label class="day-filter-label">Dag<select id="filter-day"><option value="">Alle dagen</option>${WEEKDAYS.map((x) => `<option value="${x[0]}" ${state.filters.day === x[0] ? "selected" : ""}>${x[1]}</option>`).join("")}</select></label><label>Herhaling<select id="filter-recurrence"><option value="">Alle herhalingen</option><option value="weekly" ${state.filters.recurrence === "weekly" ? "selected" : ""}>Dagen</option><option value="monthly" ${state.filters.recurrence === "monthly" ? "selected" : ""}>Maandelijks</option></select></label><label>Status<select id="filter-active"><option value="">Alle</option><option value="true" ${state.filters.active === "true" ? "selected" : ""}>Actief</option><option value="false" ${state.filters.active === "false" ? "selected" : ""}>Inactief</option></select></label>${hasFilters ? '<button type="button" class="button small" id="clear-filters">Filters wissen</button>' : ""}      ${restricted && state.manageView === "list" ? '    <p class="manage-restricted"><span class="message-label">Let op:</span> <span>Verslepen is uitgeschakeld zolang er filters actief zijn.</span></p>' : ""}</div><details class="metadata-legend"><summary>Uitleg bij labels</summary><div class="metadata-legend-items"><span><span class="deadline">◷ 14:00</span><span>tijdstip waarop de activiteit uiterlijk afgerond moet zijn</span></span><span><span class="meta-item">◷ 30 minuten</span><span>indicatie van de benodigde tijd</span></span><span><span class="meta-item instruction-meta">✦ Werkinstructie</span><span>er is een werkinstructie beschikbaar</span></span><span><span class="meta-item other-department-meta">Andere afdeling</span><span>activiteit voor een andere afdeling</span></span></div></details>${content}</section>`;
+}
+function manageWeekOverview(filtered, hasFilters) {
+  const days = state.filters.day
+    ? WEEKDAYS.filter(([day]) => day === state.filters.day)
+    : WEEKDAYS;
+  return `<p class="manage-week-help">Versleep om te sorteren of een ander dagdeel te kiezen. Dit geldt voor alle herhalingsdagen. Klik op een activiteit om deze te bewerken.</p><div class="manage-week-scroll"><table class="manage-week-table"><caption class="sr-only">Activiteiten per dag en dagdeel</caption><thead><tr><th scope="col">Dag</th>${DAYPARTS.map(([key, label]) => `<th scope="col">${label}</th>`).join("")}</tr></thead><tbody>${days
+    .map(
+      ([day, dayLabel]) =>
+        `<tr><th scope="row">${dayLabel}</th>${DAYPARTS.map(([key]) => {
+          const activities = filtered.filter(
+            (activity) =>
+              activity.daypart === key && activityMatchesDay(activity, day),
+          );
+          return `<td><div class="manage-week-cell"><span class="manage-week-time">${esc(timeValue(state.plan, day, key))}</span><div class="manage-week-activities" data-dropzone="${key}">${activities
+            .map((activity) => manageWeekActivity(activity, day, key))
+            .join("") || `<span class="manage-week-empty">${hasFilters ? "Geen passende activiteiten" : "Geen activiteiten"}</span>`}</div></div></td>`;
+        }).join("")}</tr>`,
+    )
+    .join("")}</tbody></table></div>`;
+}
+function duplicateCountFor(activity) {
+  return state.plan.activities.filter(
+    (candidate) =>
+      candidate.daypart === activity.daypart &&
+      candidate.name.trim().toLocaleLowerCase() ===
+        activity.name.trim().toLocaleLowerCase() &&
+      recurrencesOverlap(activity, candidate),
+  ).length;
+}
+function manageWeekActivity(activity, day, daypart) {
+  const duplicateCount = duplicateCountFor(activity),
+    recurrence =
+      activity.recurrence.type === "monthly"
+        ? `<span class="manage-week-label">${esc(recurrenceLabel(activity.recurrence))}</span>`
+        : "",
+    inactive = activity.active
+      ? ""
+      : '<span class="manage-week-label">Inactief</span>',
+    duplicate =
+      duplicateCount > 1
+        ? '<span class="manage-week-label duplicate-meta">dubbel</span>'
+        : "",
+    deadline = activity.deadline
+      ? `<span class="deadline manage-week-deadline" aria-label="Uiterlijk om ${esc(activity.deadline)}">◷ ${esc(activity.deadline)}</span>`
+      : "",
+    duration =
+      activity.durationMinutes != null
+        ? `<span class="manage-week-details">${formatMinutes(activity.durationMinutes)}</span>`
+        : "",
+    weekday = WEEKDAYS.find(([key]) => key === day)?.[1].toLowerCase(),
+    daypartLabel = DAYPARTS.find(([key]) => key === daypart)?.[1].toLowerCase();
+  return `<button type="button" draggable="true" class="manage-week-activity edit${activity.active ? "" : " inactive"}${activity.loadOnly ? " other-department" : ""}" data-id="${esc(activity.id)}" title="Versleep of klik om te bewerken" aria-label="${esc(activity.name)} bewerken op ${weekday}, ${daypartLabel}"><span class="manage-week-drag" aria-hidden="true">⋮⋮</span><span class="manage-week-content"><strong>${esc(activity.name)}</strong>${deadline}${duration}${recurrence}${inactive}${duplicate}</span></button>`;
 }
 function manageCard(a, restricted) {
   const instruction = a.workInstruction?.trim(),
-    duplicateCount = state.plan.activities.filter(
-      (candidate) =>
-        candidate.daypart === a.daypart &&
-        candidate.name.trim().toLocaleLowerCase() ===
-          a.name.trim().toLocaleLowerCase() &&
-        recurrencesOverlap(a, candidate),
-    ).length,
+    duplicateCount = duplicateCountFor(a),
     monthlyMeta =
       a.recurrence.type === "monthly"
         ? `<span class="manage-monthly-recurrence">Maandelijks · elke ${esc(MONTHLY_OCCURRENCES.find(([key]) => key === String(a.recurrence.occurrence))?.[1] || "onbekend")} ${esc(WEEKDAYS.find(([key]) => key === a.recurrence.weekday)?.[1].toLowerCase() || "onbekende dag")}</span>`
@@ -618,6 +669,12 @@ function bindPage() {
     validateWeek();
   });
   $("#add-activity")?.addEventListener("click", () => showForm());
+  document.querySelectorAll("[data-manage-view]").forEach((button) =>
+    button.addEventListener("click", () => {
+      state.manageView = button.dataset.manageView;
+      render();
+    }),
+  );
   $("#clear-filters")?.addEventListener("click", () => {
     state.filters = { ...DEFAULT_FILTERS };
     render();
@@ -673,6 +730,7 @@ function bindPage() {
   document.querySelectorAll("[data-dropzone]").forEach((z) =>
     z.addEventListener("dragover", (e) => {
       e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
       const target = e.target.closest("[data-id]");
       if (target) target.classList.add("drop-target");
     }),
@@ -687,9 +745,10 @@ function bindPage() {
   document
     .querySelectorAll("[draggable=true]")
     .forEach((c) =>
-      c.addEventListener("dragstart", (e) =>
-        e.dataTransfer.setData("text/plain", c.dataset.id),
-      ),
+      c.addEventListener("dragstart", (e) => {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", c.dataset.id);
+      }),
     );
   document.querySelectorAll("[data-dropzone]").forEach((z) =>
     z.addEventListener("drop", async (e) => {
@@ -700,7 +759,7 @@ function bindPage() {
       document
         .querySelectorAll(".drop-target")
         .forEach((x) => x.classList.remove("drop-target"));
-      if (id && dropzone.dataset.dropzone) {
+      if (id && dropzone.dataset.dropzone && target?.dataset.id !== id) {
         const after =
           target &&
           e.clientY >
