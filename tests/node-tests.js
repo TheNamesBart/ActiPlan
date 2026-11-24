@@ -5,6 +5,7 @@ import {
   dateFromIsoWeek,
   weeksInYear,
   orderActivities,
+  groupActivitiesByName,
   reorderActivities,
   recurrenceLabel,
   formatMinutes,
@@ -73,6 +74,38 @@ const checks = [
     ])[0].daypart === "before_opening",
   ],
   [
+    "gelijknamige activiteiten groeperen zonder varianten samen te voegen",
+    (() => {
+      const activities = [
+          {
+            id: "variant-morning",
+            name: " Vlinderen bij kassa ",
+            daypart: "morning",
+            durationMinutes: 30,
+          },
+          {
+            id: "variant-afternoon",
+            name: "vlinderen bij kassa",
+            daypart: "afternoon",
+            durationMinutes: 60,
+          },
+          { id: "other", name: "Andere taak", daypart: "evening" },
+        ],
+        groups = groupActivitiesByName(activities);
+      return (
+        groups.length === 2 &&
+        groups[0].length === 2 &&
+        groups[0][0] === activities[0] &&
+        groups[0][1] === activities[1] &&
+        groups[1][0] === activities[2] &&
+        activities[0].durationMinutes === 30 &&
+        activities[1].durationMinutes === 60 &&
+        activities[0].daypart === "morning" &&
+        activities[1].daypart === "afternoon"
+      );
+    })(),
+  ],
+  [
     "verplaatsen naar ander dagdeel",
     (() => {
       const activities = [
@@ -138,7 +171,14 @@ const checks = [
     recurrenceLabel({ type: "monthly", occurrence: "2", weekday: "wed" }) ===
       "Maandelijks (tweede Woensdag)",
   ],
-  ["dagelijkse herhaling krijgt een label", recurrenceLabel({ type: "daily" }) === "Dagen (alle dagen)"],
+  ["dagelijkse herhaling wordt als alle dagen weergegeven", recurrenceLabel({ type: "daily" }) === "Alle dagen"],
+  [
+    "wekelijkse herhaling op alle dagen wordt samengevat",
+    recurrenceLabel({
+      type: "weekly",
+      weekdays: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
+    }) === "Alle dagen",
+  ],
   [
     "tweede woensdag wordt herkend",
     occursOn(

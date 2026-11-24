@@ -41,12 +41,15 @@ export const createDaypartTimes = () =>
       ),
     ]),
   );
-export const recurrenceLabel = (recurrence) =>
-  recurrence.type === "daily"
-    ? "Dagen (alle dagen)"
-    : recurrence.type === "weekly"
-      ? `Dagen (${recurrence.weekdays.map((day) => WEEKDAYS.find(([key]) => key === day)?.[1].toLowerCase()).join(", ")})`
-      : `Maandelijks (${MONTHLY_OCCURRENCES.find(([key]) => key === String(recurrence.occurrence))?.[1] || "onbekend"} ${WEEKDAYS.find(([key]) => key === recurrence.weekday)?.[1] || "onbekende dag"})`;
+export const recurrenceLabel = (recurrence) => {
+  if (recurrence.type === "daily") return "Alle dagen";
+  if (recurrence.type === "weekly") {
+    const weekdays = new Set(recurrence.weekdays);
+    if (WEEKDAYS.every(([day]) => weekdays.has(day))) return "Alle dagen";
+    return `Dagen (${recurrence.weekdays.map((day) => WEEKDAYS.find(([key]) => key === day)?.[1].toLowerCase()).join(", ")})`;
+  }
+  return `Maandelijks (${MONTHLY_OCCURRENCES.find(([key]) => key === String(recurrence.occurrence))?.[1] || "onbekend"} ${WEEKDAYS.find(([key]) => key === recurrence.weekday)?.[1] || "onbekende dag"})`;
+};
 const DAYPART_KEYS = new Set(DAYPARTS.map((x) => x[0]));
 const WEEKDAY_KEYS = new Set(WEEKDAYS.map((x) => x[0]));
 const TIME_RANGE_PATTERN =
@@ -145,6 +148,16 @@ export function orderActivities(activities) {
         DAYPARTS.findIndex((x) => x[0] === b.daypart) ||
       a.sortOrder - b.sortOrder,
   );
+}
+export function groupActivitiesByName(activities) {
+  const groups = new Map();
+  for (const activity of activities) {
+    const key = activity.name.trim().toLocaleLowerCase(),
+      group = groups.get(key);
+    if (group) group.push(activity);
+    else groups.set(key, [activity]);
+  }
+  return [...groups.values()];
 }
 export function reorderActivities(
   activities,
